@@ -2,104 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shadow Fruit Control Panel</title>
+  <title>Soul Fruit Control Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="page">
     <header class="page-header">
-      <h1>Shadow Fruit Control Panel</h1>
-      <p>Track harvested shadows, spend Shadow Power Units (SPU), reanimate corpses, and generate abilities.</p>
+      <h1>Soul Fruit Control Panel</h1>
+      <p>Harvest souls, track Soul Power Units (SPU), create homies, and generate custom Soul Fruit abilities.</p>
     </header>
 
-    <!-- PANEL 1: ADD NEW SHADOW -->
+    <!-- PANEL 1: ADD NEW SOUL -->
     <section class="card card-collapsible" data-panel="1">
       <div class="card-header">
-        <h2>1. Add a New Shadow</h2>
+        <h2>1. Add a New Soul</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
         <div class="grid-2">
           <div class="field">
-            <label for="shadow-name">Name / Title</label>
-            <input id="shadow-name" type="text" placeholder="Vice Admiral, Kaido, Bandit #3" />
+            <label for="soul-name">Soul Owner / Title</label>
+            <input id="soul-name" type="text" placeholder="Brave Captain, Terrified Villager, Yonko, etc." />
           </div>
 
           <div class="field">
-            <label for="shadow-raw">Raw Might Rating (0–20)</label>
-            <input id="shadow-raw" type="number" min="0" max="20" value="5" />
-            <small>Overall strength impression in One Piece terms.</small>
+            <label for="soul-power">Raw Power (0–20)</label>
+            <input id="soul-power" type="number" min="0" max="20" value="5" />
+            <small>Overall combat / narrative strength of the creature.</small>
           </div>
 
           <div class="field">
-            <label for="shadow-prof">Proficiency Tier</label>
-            <select id="shadow-prof">
-              <!-- filled by JS -->
-            </select>
-            <small>How skilled / experienced they are.</small>
+            <label for="soul-fear">Fear at Extraction (0–10)</label>
+            <input id="soul-fear" type="number" min="0" max="10" value="5" />
+            <small>Higher fear makes the soul easier to control and stronger for offense.</small>
           </div>
 
           <div class="field">
-            <label for="shadow-template">Template Tier</label>
-            <select id="shadow-template">
-              <!-- filled by JS -->
-            </select>
-            <small>Basic civilian, trained fighter, advanced fighter with basic Haki, Divine end-game monster, etc.</small>
+            <label for="soul-attachment">Emotional Weight / Attachment (0–10)</label>
+            <input id="soul-attachment" type="number" min="0" max="10" value="5" />
+            <small>Important loved ones, strong dreams, or legendary status raise this.</small>
           </div>
         </div>
 
         <div class="actions-row">
-          <button id="btn-calc-shadow" type="button" class="btn-primary">Calculate Shadow Level</button>
-          <button id="btn-add-shadow" type="button" class="btn-secondary">Add to My Shadow Collection</button>
+          <button id="btn-calc-soul" type="button" class="btn-primary">Calculate Soul Level</button>
+          <button id="btn-add-soul" type="button" class="btn-secondary">Add to Soul Library</button>
         </div>
 
-        <div id="shadow-calc-output" class="calc-output"></div>
+        <div id="soul-calc-output" class="calc-output"></div>
       </div>
     </section>
 
-    <!-- PANEL 2: MY SHADOWS -->
+    <!-- PANEL 2: MY SOULS -->
     <section class="card card-collapsible" data-panel="2">
       <div class="card-header">
-        <h2>2. My Collected Shadows</h2>
+        <h2>2. My Stored Souls</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
         <div class="totals-row">
-          <span>Total Shadow Power (SPU): <strong id="total-spu">0</strong></span>
+          <span>Total Soul Power (SPU): <strong id="total-spu">0</strong></span>
           <span>Spent SPU: <strong id="spent-spu">0</strong></span>
           <span>Available SPU: <strong id="available-spu">0</strong></span>
         </div>
-        <div id="shadow-list" class="shadow-list">
-          <!-- shadow cards injected here -->
+        <div id="soul-list" class="soul-list">
+          <!-- soul cards injected here -->
         </div>
       </div>
     </section>
 
-    <!-- PANEL 3: SPEND SPU ON BUFFS -->
+    <!-- PANEL 3: SPEND SPU ON BOONS -->
     <section class="card card-collapsible" data-panel="3">
       <div class="card-header">
-        <h2>3. Spend Shadow Power on Buffs</h2>
+        <h2>3. Spend SPU on Boons & Contracts</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
         <div class="field">
-          <label for="buff-target-select">Current Buff Target</label>
+          <label for="buff-target-select">Current Beneficiary</label>
           <select id="buff-target-select"></select>
-          <small>Buffs are tracked per target (Elren, each ally, each corpse).</small>
+          <small>Boons are tracked per target (Soul Fruit user, each ally, each homie).</small>
         </div>
 
         <div class="ally-add-row">
-          <input id="ally-name-input" type="text" placeholder="Add new ally target name" />
-          <button id="btn-add-ally" type="button" class="btn-secondary">Add Ally Target</button>
+          <input id="ally-name-input" type="text" placeholder="Add new ally / homie target name" />
+          <button id="btn-add-ally" type="button" class="btn-secondary">Add Target</button>
         </div>
 
         <div class="field">
           <label for="buff-tools-select">Advanced Tools</label>
           <select id="buff-tools-select">
             <option value="hide">Hide tools</option>
-            <option value="custom">Custom Buff Creator only</option>
-            <option value="dc">Shadow DC Helper only</option>
+            <option value="custom">Custom Boon Creator only</option>
+            <option value="dc">Soul DC Helper only</option>
             <option value="both">Show both</option>
           </select>
         </div>
@@ -112,13 +108,13 @@
           <!-- selected buffs for current target -->
         </div>
 
-        <!-- CUSTOM BUFF CREATOR -->
+        <!-- CUSTOM BOON CREATOR -->
         <div id="custom-buff-section" class="advanced-section hidden">
-          <h3>Custom Buff Creator</h3>
+          <h3>Custom Boon / Contract</h3>
           <div class="grid-3">
             <div class="field">
-              <label for="custom-buff-name">Buff Name</label>
-              <input id="custom-buff-name" type="text" placeholder="Shadow Fortified Bones" />
+              <label for="custom-buff-name">Name</label>
+              <input id="custom-buff-name" type="text" placeholder="Soul-Forged Shell, Terror Pact, etc." />
             </div>
             <div class="field">
               <label for="custom-buff-cost">Base SPU Cost (first copy)</label>
@@ -131,19 +127,19 @@
           </div>
           <div class="field">
             <label for="custom-buff-desc">Description</label>
-            <textarea id="custom-buff-desc" rows="2" placeholder="What does this buff do mechanically? AC, HP, damage, saves, etc."></textarea>
+            <textarea id="custom-buff-desc" rows="2" placeholder="What does this boon do mechanically? AC, HP, damage, movement, conditions, etc."></textarea>
           </div>
-          <button id="btn-add-custom-buff" type="button" class="btn-secondary">Add Custom Buff</button>
+          <button id="btn-add-custom-buff" type="button" class="btn-secondary">Add Custom Boon</button>
         </div>
 
-        <!-- DC HELPER -->
+        <!-- SOUL DC HELPER -->
         <div id="dc-helper-section" class="advanced-section hidden">
-          <h3>Shadow DC Helper</h3>
+          <h3>Soul DC Helper</h3>
           <div class="grid-3">
             <div class="field">
-              <label for="dc-helper-sl">Shadow Level (SL)</label>
+              <label for="dc-helper-sl">Soul Level (SL)</label>
               <input id="dc-helper-sl" type="number" min="1" max="10" value="5" />
-              <small>Use your strongest relevant shadow or average SL.</small>
+              <small>Use your strongest stored soul or an average.</small>
             </div>
             <div class="field">
               <label for="dc-helper-prof">Proficiency Bonus</label>
@@ -160,65 +156,76 @@
       </div>
     </section>
 
-    <!-- PANEL 4: REANIMATE CORPSE -->
+    <!-- PANEL 4: CREATE HOMIE -->
     <section class="card card-collapsible" data-panel="4">
       <div class="card-header">
-        <h2>4. Reanimate a Corpse</h2>
+        <h2>4. Create a Homie / Soul Construct</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
         <div class="grid-2">
           <div class="field">
-            <label for="corpse-name">Corpse Name / Type</label>
-            <input id="corpse-name" type="text" placeholder="Ogre corpse, Ancient dragon bones, Giant warrior" />
+            <label for="homie-name">Homie Name</label>
+            <input id="homie-name" type="text" placeholder="Sun Homie, Living Cutlass, Castle Spirit, etc." />
           </div>
           <div class="field">
-            <label for="corpse-durability">Corpse Durability Tier (1–10)</label>
-            <input id="corpse-durability" type="number" min="1" max="10" value="5" />
-            <small>How tough the physical body is.</small>
+            <label for="homie-body">Body / Vessel</label>
+            <input id="homie-body" type="text" placeholder="Sword, ship, house, storm cloud, fire, etc." />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="homie-durability">Body Durability Tier (1–10)</label>
+            <input id="homie-durability" type="number" min="1" max="10" value="5" />
+            <small>How tough the physical object or elemental body is.</small>
+          </div>
+          <div class="field">
+            <label for="homie-element">Element / Theme</label>
+            <input id="homie-element" type="text" placeholder="Fire, storm, sweets, shadowy knight, etc." />
           </div>
         </div>
 
         <div class="field">
-          <label for="corpse-shadow-mode">Which Shadows Power It?</label>
-          <select id="corpse-shadow-mode">
-            <option value="active">Use active shadows</option>
-            <option value="all">Use all stored shadows</option>
-            <option value="selected">Use selected shadows below</option>
+          <label for="homie-soul-mode">Which Souls Power It?</label>
+          <select id="homie-soul-mode">
+            <option value="active">Use active souls</option>
+            <option value="all">Use all stored souls</option>
+            <option value="selected">Use selected souls below</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="corpse-shadow-select">Custom Shadow Selection</label>
-          <select id="corpse-shadow-select" multiple></select>
-          <small>Select specific shadows when “Use selected shadows below” is chosen.</small>
+          <label for="homie-soul-select">Custom Soul Selection</label>
+          <select id="homie-soul-select" multiple></select>
+          <small>Select specific souls when “Use selected souls below” is chosen.</small>
         </div>
 
         <div class="actions-row">
-          <button id="btn-generate-corpse" type="button" class="btn-primary">Generate Reanimated Stat Block</button>
-          <button id="btn-edit-buffs-corpse" type="button" class="btn-secondary">Edit Buffs for This Corpse</button>
+          <button id="btn-generate-homie" type="button" class="btn-primary">Generate Homie Stat Block</button>
+          <button id="btn-edit-buffs-homie" type="button" class="btn-secondary">Edit Boons for This Homie</button>
         </div>
 
-        <div id="corpse-stat-block" class="corpse-stat-block">
-          <!-- generated corpse card -->
+        <div id="homie-stat-block" class="homie-stat-block">
+          <!-- generated homie card -->
         </div>
       </div>
     </section>
 
-    <!-- PANEL 5: ASK THE SHADOWS (AI) -->
+    <!-- PANEL 5: ASK THE SOULS (AI) -->
     <section class="card card-collapsible" data-panel="5">
       <div class="card-header">
-        <h2>5. Ask the Shadows (AI)</h2>
+        <h2>5. Ask the Souls (AI)</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
         <div class="field">
           <label for="ai-notes">Extra Notes / Theme</label>
-          <textarea id="ai-notes" rows="3" placeholder="Example: Aggressive melee bruiser, terrifying battlefield controller, focuses on fear and grapples."></textarea>
+          <textarea id="ai-notes" rows="3" placeholder="Example: terrifying battlefield controller, homie-focused build, defensive tank, etc."></textarea>
         </div>
 
         <div class="actions-row">
-          <button id="btn-generate-abilities" type="button" class="btn-primary">Generate Abilities with AI (stub)</button>
+          <button id="btn-generate-abilities" type="button" class="btn-primary">Generate Soul Abilities with AI</button>
           <button id="btn-add-empty-ability" type="button" class="btn-secondary">Add Empty Ability Card</button>
         </div>
 
@@ -231,11 +238,11 @@
     <!-- PANEL 6: SUMMARY -->
     <section class="card card-collapsible" data-panel="6">
       <div class="card-header">
-        <h2>6. Current Summary (Shadow Party Dashboard)</h2>
+        <h2>6. Current Summary (Soul Party Dashboard)</h2>
         <button class="collapse-toggle" type="button">▼</button>
       </div>
       <div class="card-body">
-        <p>At-a-glance views for Elren (primary user), each ally, and each reanimated corpse. Use this as a quick reference at the table.</p>
+        <p>At-a-glance views for the Soul Fruit user, each ally, and each homie. Use this as a quick reference at the table.</p>
         <div id="summary-grid" class="summary-grid">
           <!-- summary cards -->
         </div>
