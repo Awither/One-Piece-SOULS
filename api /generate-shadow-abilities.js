@@ -1,121 +1,136 @@
-// api/generate-soul-abilities.js
-// Vercel serverless function for calling OpenAI to generate Soul Fruit abilities.
+// /api/generate-soul-abilities.js
+// Vercel Serverless Function – Calls OpenAI Chat Completions
+// Uses process.env.OPENAI_API_KEY
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
-    return;
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    res
-      .status(500)
-      .json({ error: "Missing OPENAI_API_KEY in environment variables." });
-    return;
+    return res.status(500).json({ error: "OPENAI_API_KEY is not configured." });
   }
 
   try {
-    const {
-      souls = [],
-      totalSpu = 0,
-      spentSpu = 0,
-      availableSpu = 0,
-      selectedBuffIds = [],
-      notes = ""
-    } = req.body || {};
+    const { souls, homies, domains, notes } = req.body || {};
 
-    const soulSummary =
-      !Array.isArray(souls) || !souls.length
-        ? "No souls currently stored."
-        : souls
-            .map(
-              (s) =>
-                `Name: ${s.name || "(Unnamed)"} | SL ${s.soulLevel} | SPU ${
-                  s.spu
-                } | Power ${s.power} | Fear ${s.fear} | Attachment ${
-                  s.attachment
-                } | Active: ${s.active ? "Yes" : "No"}`
-            )
-            .join("\n");
+    const soulCount = Array.isArray(souls) ? souls.length : 0;
+    const homieCount = Array.isArray(homies) ? homies.length : 0;
+    const domainCount = Array.isArray(domains) ? domains.length : 0;
 
-    const activeBuffsText =
-      !Array.isArray(selectedBuffIds) || !selectedBuffIds.length
-        ? "No active boons."
-        : selectedBuffIds.join(", ");
+    const systemPrompt = `
+You are an expert tabletop RPG designer and One Piece lore master, channeling Big Mom's Soru Soru no Mi (Soul-Soul Fruit).
+The user is running a D&D-style game with a custom soul & homie system. They want mechanically tight, flavorful abilities.
 
-    const userPrompt = `
-You are helping design powerful but playable One Piece–style Soul Fruit abilities
-for a D&D-like campaign. The Soul Fruit works like Big Mom’s: it steals lifespan / souls,
-stores them as a resource (SPU = Soul Power Units), and can create “homies” (sentient
-objects or elementals) or empower allies.
+Your output MUST be STRICT JSON, with no commentary, no markdown, and no extra keys. Do NOT use trailing commas.
+Return an object:
 
-Current Soul Fruit state:
+{
+  "abilities": [
+    {
+      "name": string,
+      "assignTo": string,              // "general" or a name like "Prometheus", "Domain: Candy Coast", etc.
+      "actionType": string,            // "Action", "Bonus Action", "Reaction", "Lair Action", etc.
+      "range": string,
+      "target": string,
+      "saveOrDC": string,              // e.g. "Wis save vs. DC 18" or "no save"
+      "damageDice": string,            // e.g. "6d10 necrotic + 4d8 thunder"
+      "effect": string,                // concise but detailed mechanical effect text
+      "combo": string                  // synergies with homies / domains / souls
+    }
+  ]
+}
 
-Total SPU: ${totalSpu}
-Spent SPU: ${spentSpu}
-Available SPU: ${availableSpu}
-
-Souls:
-${soulSummary}
-
-Selected boons / buffs (IDs or names): ${activeBuffsText}
-
-Extra notes / theme from user:
-${notes || "(none)"}
-
-TASK:
-1. Propose 3–5 unique, named Soul Fruit techniques (attacks or utility).
-   - For each: Name, short description, clear mechanical effect (damage dice, save type / DC, conditions, action type, range, duration).
-   - These should feel like high-level D&D abilities flavored with Big Mom–style soul control.
-2. Propose 1–3 homie or soul-construct abilities.
-   - Focus on what special things homies can do in combat or utility (movement tricks, resistances, auras, etc.).
-3. Propose 1–2 soul-contract or “lifespan bargain” style abilities.
-   - These should trade lifespan or SPU for big effects, with clear costs and risks.
-
-Output in a clean, game-usable plain text format with clear headings and bullet-like lines,
-but DO NOT use markdown syntax. It's okay to use terms like "attack roll", "saving throw",
-"DC", and "action". Avoid referencing D&D by name or talking about rules out of character.
+Guidelines:
+- Make abilities powerful, versatile, and fun to play, but still readable at the table.
+- Use the souls' traits and SoL/SPU scale to flavor impact.
+- Include a mix of:
+  - Homie abilities
+  - Healing/support abilities
+  - Territory / lair actions
+  - Signature homie powers (sun, storm, weapons, custom elements)
+  - Soul-Fruit themed abilities (fear, HP drain, soul fragments, etc.)
+- Some abilities should clearly reference homie names or domain names provided by the user.
+- Some should be "general" abilities usable by the main Soul-Fruit user.
+- Make at least 8 abilities, up to ~20, depending on how much material the user has.
 `;
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    const userSummary = `
+SOUL BANK (count: ${soulCount})
+${JSON.stringify(souls || [], null, 2)}
+
+HOMIES (count: ${homieCount})
+${JSON.stringify(homies || [], null, 2)}
+
+DOMAINS (count: ${domainCount})
+${JSON.stringify(domains || [], null, 2)}
+
+USER NOTES:
+${notes || "(none)"}
+`;
+
+    const body = {
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Using the following data, design soul- and homie-themed abilities. Remember: respond ONLY with valid JSON.\n\n${userSummary}`
+        }
+      ],
+      temperature: 0.9
+    };
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert One Piece + D&D homebrew designer. You create powerful but playable Soul Fruit and homie abilities with clear mechanics."
-          },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.9,
-        max_tokens: 1100
-      })
+      body: JSON.stringify(body)
     });
 
-    if (!openaiRes.ok) {
-      const text = await openaiRes.text();
-      console.error("OpenAI error:", text);
-      res.status(500).json({ error: "OpenAI API error", details: text });
-      return;
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("OpenAI API error:", text);
+      return res.status(500).json({ error: "OpenAI API error", details: text });
     }
 
-    const data = await openaiRes.json();
-    const text =
-      data.choices?.[0]?.message?.content ||
-      "No content returned from the AI model.";
+    const json = await response.json();
+    const rawContent = json?.choices?.[0]?.message?.content || "";
 
-    res.status(200).json({ text });
+    let abilities = [];
+    try {
+      const parsed = JSON.parse(rawContent);
+      if (parsed && Array.isArray(parsed.abilities)) {
+        abilities = parsed.abilities.map((a) => ({
+          name: a.name || "Soul Ability",
+          assignTo: a.assignTo || "",
+          actionType: a.actionType || "",
+          range: a.range || "",
+          target: a.target || "",
+          saveOrDC: a.saveOrDC || a.save || "",
+          damageDice: a.damageDice || "",
+          effect: a.effect || a.mechanicalEffect || "",
+          combo: a.combo || a.interactions || ""
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to parse JSON from OpenAI:", err, rawContent);
+      // Fallback: return raw text for debugging
+      return res.status(200).json({
+        abilities: [],
+        raw: rawContent
+      });
+    }
+
+    return res.status(200).json({
+      abilities
+    });
   } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ error: "Internal server error", details: String(err) });
+    console.error("Server error:", err);
+    return res.status(500).json({ error: "Server error", details: String(err) });
   }
 }
