@@ -3,9 +3,7 @@
 // Front-end State & Logic
 // ================================
 
-// ---------- Global State ----------
-
-const APP_STORAGE_KEY = "soulSoulFruitAppState_v1";
+const APP_STORAGE_KEY = "soulSoulFruitAppState_v2";
 
 let state = {
   souls: [],
@@ -15,7 +13,7 @@ let state = {
   summaries: [],
   meta: {
     createdAt: Date.now(),
-    version: 1
+    version: 2
   }
 };
 
@@ -29,27 +27,18 @@ function clamp(num, min, max) {
   return Math.min(max, Math.max(min, num));
 }
 
-// Calculate SoL from raw might & tier
-function calculateSol(rawMight, tier) {
-  const tierFactorMap = {
-    minion: 0.4,
-    standard: 0.7,
-    elite: 1.0,
-    boss: 1.3,
-    mythic: 1.6
-  };
-  const factor = tierFactorMap[tier] ?? 0.7;
-  const sol = Math.round(rawMight * factor) || 1;
-  return clamp(sol, 1, 10);
-}
+// Core soul metrics: Raw Might 1–10, Prof Tier 0–9, Willpower 1–10
+function calculateSoulMetrics(rawMight, proficiencyTier, willpower) {
+  const rm = clamp(rawMight || 1, 1, 10);
+  const pt = clamp(proficiencyTier || 0, 0, 9);
+  const wp = clamp(willpower || 1, 1, 10);
 
-// Calculate SPU, Failure Margin, Terror Roll, HP lost
-function calculateSoulNumbers({ soulDC, saveResult, d20Roll, sol }) {
-  const failureMargin = Math.max(0, soulDC - saveResult);
-  const terrorRoll = d20Roll + failureMargin;
-  const spuGained = Math.floor((terrorRoll * sol) / 4);
-  const maxHpLost = Math.floor(terrorRoll / 2);
-  return { failureMargin, terrorRoll, spuGained, maxHpLost };
+  const score = rm * 2 + pt * 3 + wp * 5;
+  const sol = clamp(Math.round(score / 10), 1, 10);
+  const spuGained = Math.round(score * 15); // strong scaling, 1000+ for top beings
+  const maxHpLost = Math.round(score * 3);  // flavor
+
+  return { score, sol, spuGained, maxHpLost };
 }
 
 // Compute SPU totals from state
@@ -76,16 +65,14 @@ function updateSpuDisplay() {
   document.getElementById("spu-available").textContent = available;
 }
 
-// Check if we can spend SPU
 function canSpendSpu(cost) {
   const { available } = computeSpuTotals();
   return cost <= available;
 }
 
-// Spend SPU by adding to a target field
 function spendSpuOn(obj, field, cost) {
   if (!canSpendSpu(cost)) {
-    alert("Not enough SPU available to perform this operation.");
+    alert("Not enough Soul Energy (SPU) available to perform this operation.");
     return false;
   }
   obj[field] = (obj[field] || 0) + cost;
@@ -128,7 +115,7 @@ function resetState() {
     summaries: [],
     meta: {
       createdAt: Date.now(),
-      version: 1
+      version: 2
     }
   };
   saveStateToStorage();
@@ -177,7 +164,6 @@ function initPanels() {
         }
       };
       header.addEventListener("click", (e) => {
-        // Avoid toggling if clicking inside header buttons intentionally
         if (e.target === toggle || e.target === header) {
           toggleFn();
         } else if (e.target.closest(".panel-toggle")) {
@@ -202,7 +188,7 @@ function renderSoulSelectOptions() {
   state.souls.forEach((s) => {
     const opt = document.createElement("option");
     opt.value = s.id;
-    opt.textContent = `${s.name} (SPU ${s.spuGained}, SoL ${s.sol})`;
+    opt.textContent = `${s.name} (SPU ${s.spuGained || 0}, SoL ${s.sol || "?"})`;
     select.appendChild(opt);
   });
   if (currentValue) {
@@ -256,30 +242,31 @@ function renderSoulList() {
     const meta = document.createElement("div");
     meta.className = "soul-meta";
 
-    const tierChip = document.createElement("span");
-    tierChip.className = "chip";
-    tierChip.textContent = `Tier: ${soul.tierLabel || soul.tier || "?"}`;
-    meta.appendChild(tierChip);
-
     const mightChip = document.createElement("span");
     mightChip.className = "chip";
-    mightChip.textContent = `Might: ${soul.rawMight}`;
+    mightChip.textContent = `Raw Might: ${soul.rawMight || "?"}/10`;
     meta.appendChild(mightChip);
+
+    const profLabel = soul.proficiencyLabel || (typeof soul.proficiencyTier === "number" ? `Tier ${soul.proficiencyTier}` : "?");
+    const profChip = document.createElement("span");
+    profChip.className = "chip";
+    profChip.textContent = `Proficiency: ${profLabel}`;
+    meta.appendChild(profChip);
+
+    const willChip = document.createElement("span");
+    willChip.className = "chip";
+    willChip.textContent = `Willpower: ${soul.willpower || "?"}/10`;
+    meta.appendChild(willChip);
 
     const solChip = document.createElement("span");
     solChip.className = "chip";
-    solChip.textContent = `SoL: ${soul.sol}`;
+    solChip.textContent = `SoL: ${soul.sol || "?"}`;
     meta.appendChild(solChip);
 
     const spuChip = document.createElement("span");
     spuChip.className = "chip";
-    spuChip.textContent = `SPU: ${soul.spuGained}`;
+    spuChip.textContent = `Soul Energy: ${soul.spuGained || 0}`;
     meta.appendChild(spuChip);
-
-    const dcChip = document.createElement("span");
-    dcChip.className = "chip";
-    dcChip.textContent = `Soul DC: ${soul.soulDCUsed}`;
-    meta.appendChild(dcChip);
 
     main.appendChild(meta);
 
@@ -324,9 +311,9 @@ function renderSoulList() {
 
     const stats = document.createElement("div");
     stats.className = "soul-stats";
-    stats.innerHTML =
-      `Failure Margin: ${soul.failureMargin} | TR: ${soul.terrorRoll}<br>` +
-      `Save: ${soul.saveResult} | HP lost (flavor): ${soul.maxHpStolen}`;
+    const score = soul.score ?? "?";
+    const hpLost = soul.maxHpStolen ?? "?";
+    stats.innerHTML = `Soul Score: ${score} | HP lost (flavor): ${hpLost}`;
     right.appendChild(stats);
 
     const actions = document.createElement("div");
@@ -352,36 +339,26 @@ function renderSoulList() {
   });
 }
 
-// Soul capture calculation
 function updateSoulCalcFromForm() {
-  const rawMight = Number(document.getElementById("soul-raw-might").value) || 0;
-  const tier = document.getElementById("soul-tier").value || "standard";
-  const soulDC = Number(document.getElementById("soul-dc").value) || 0;
-  const saveResult = Number(document.getElementById("soul-save-result").value) || 0;
-  const d20Roll = Number(document.getElementById("soul-d20-roll").value) || 1;
+  const rawMight = Number(document.getElementById("soul-raw-might").value) || 1;
+  const proficiencyTier = Number(document.getElementById("soul-proficiency-tier").value) || 0;
+  const willpower = Number(document.getElementById("soul-willpower").value) || 1;
 
-  const sol = calculateSol(rawMight, tier);
-  const { failureMargin, terrorRoll, spuGained, maxHpLost } = calculateSoulNumbers({
-    soulDC,
-    saveResult,
-    d20Roll,
-    sol
-  });
+  const { score, sol, spuGained, maxHpLost } = calculateSoulMetrics(rawMight, proficiencyTier, willpower);
 
-  document.getElementById("soul-failure-margin").textContent = failureMargin;
-  document.getElementById("soul-terror-roll").textContent = terrorRoll;
+  document.getElementById("soul-score").textContent = score;
   document.getElementById("soul-sol").textContent = sol;
   document.getElementById("soul-spu-gained").textContent = spuGained;
   document.getElementById("soul-max-hp-lost").textContent = maxHpLost;
 
-  return { sol, failureMargin, terrorRoll, spuGained, maxHpLost };
+  return { score, sol, spuGained, maxHpLost };
 }
 
 function initSoulForm() {
   const form = document.getElementById("soul-capture-form");
   const calcBtn = document.getElementById("calc-soul-btn");
 
-  ["soul-raw-might", "soul-tier", "soul-dc", "soul-save-result", "soul-d20-roll"].forEach((id) => {
+  ["soul-raw-might", "soul-proficiency-tier", "soul-willpower"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", updateSoulCalcFromForm);
@@ -400,38 +377,39 @@ function initSoulForm() {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const creatureName = document.getElementById("soul-creature-name").value.trim() || "Unnamed Soul";
-      const rawMight = Number(document.getElementById("soul-raw-might").value) || 0;
-      const tier = document.getElementById("soul-tier").value || "standard";
-      const soulDC = Number(document.getElementById("soul-dc").value) || 0;
-      const saveResult = Number(document.getElementById("soul-save-result").value) || 0;
-      const d20Roll = Number(document.getElementById("soul-d20-roll").value) || 1;
+      const rawMight = Number(document.getElementById("soul-raw-might").value) || 1;
+      const proficiencyTier = Number(document.getElementById("soul-proficiency-tier").value) || 0;
+      const willpower = Number(document.getElementById("soul-willpower").value) || 1;
       const traits = document.getElementById("soul-traits").value.trim();
       const notes = document.getElementById("soul-notes").value.trim();
 
-      const { sol, failureMargin, terrorRoll, spuGained, maxHpLost } = updateSoulCalcFromForm();
+      const { score, sol, spuGained, maxHpLost } = updateSoulCalcFromForm();
 
-      const tierLabelMap = {
-        minion: "Minion",
-        standard: "Standard",
-        elite: "Elite",
-        boss: "Boss",
-        mythic: "Mythic"
+      const profLabelMap = {
+        0: "0 – Untrained",
+        1: "1 – Rookie Marine",
+        2: "2 – Seasoned Fighter",
+        3: "3 – Veteran Marine",
+        4: "4 – Elite / Rear Admiral",
+        5: "5 – Admiral",
+        6: "6 – Vice Admiral",
+        7: "7 – Yonko",
+        8: "8 – Gorosei",
+        9: "9 – Beyond Mortal Limits"
       };
 
       const soul = {
         id: generateId("soul"),
         name: creatureName,
-        rawMight,
-        tier,
-        tierLabel: tierLabelMap[tier] || tier,
-        traits,
+        rawMight: clamp(rawMight, 1, 10),
+        proficiencyTier: clamp(proficiencyTier, 0, 9),
+        proficiencyLabel: profLabelMap[proficiencyTier] || `Tier ${proficiencyTier}`,
+        willpower: clamp(willpower, 1, 10),
+        score,
         sol,
         spuGained,
-        soulDCUsed: soulDC,
-        saveResult,
-        failureMargin,
-        terrorRoll,
         maxHpStolen: maxHpLost,
+        traits,
         notes,
         availableForCrafting: true,
         soulRipImmune: false
@@ -442,12 +420,9 @@ function initSoulForm() {
       renderAll();
 
       form.reset();
-      // Reapply some defaults
       document.getElementById("soul-raw-might").value = 5;
-      document.getElementById("soul-tier").value = "standard";
-      document.getElementById("soul-dc").value = 15;
-      document.getElementById("soul-save-result").value = 10;
-      document.getElementById("soul-d20-roll").value = 10;
+      document.getElementById("soul-proficiency-tier").value = 5;
+      document.getElementById("soul-willpower").value = 7;
       updateSoulCalcFromForm();
     });
   }
@@ -457,7 +432,6 @@ function initSoulForm() {
     filterInput.addEventListener("input", () => renderSoulList());
   }
 
-  // Initial calculation
   updateSoulCalcFromForm();
 }
 
@@ -621,7 +595,6 @@ function renderHomieList() {
     }
     right.appendChild(status);
 
-    // Upgrade grid
     const upgrades = document.createElement("div");
     upgrades.className = "homie-upgrades";
 
@@ -701,7 +674,6 @@ function renderHomieList() {
     delBtn.addEventListener("click", () => {
       if (!confirm(`Delete homie "${homie.name || "Unnamed"}"?`)) return;
       state.homies = state.homies.filter((h) => h.id !== homie.id);
-      // Remove references from domains
       state.domains.forEach((d) => {
         d.territoryHomieIds = (d.territoryHomieIds || []).filter((id) => id !== homie.id);
       });
@@ -813,6 +785,77 @@ function initHomieForm() {
   }
 }
 
+// Homie AI select options
+function renderHomieSelectForAi() {
+  const select = document.getElementById("homie-ai-target");
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = `<option value="">— Select a Homie —</option>`;
+  state.homies.forEach((h) => {
+    const opt = document.createElement("option");
+    opt.value = h.id;
+    opt.textContent = h.name;
+    select.appendChild(opt);
+  });
+  if (current) select.value = current;
+}
+
+function initHomieAiForm() {
+  const form = document.getElementById("homie-ai-form");
+  if (!form) return;
+  const statusEl = document.getElementById("homie-ai-status");
+  const submitBtn = form.querySelector("button[type='submit']");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const homieId = document.getElementById("homie-ai-target").value;
+    const desc = document.getElementById("homie-ai-description").value.trim();
+    const powerLevel = Number(document.getElementById("homie-ai-power").value) || 5;
+
+    if (!homieId) {
+      alert("Select a homie to generate an attack for.");
+      return;
+    }
+
+    const homie = state.homies.find((h) => h.id === homieId);
+    if (!homie) {
+      alert("Selected homie not found.");
+      return;
+    }
+
+    const effectTypes = [];
+    if (document.getElementById("homie-ai-effect-offense").checked) effectTypes.push("Offense");
+    if (document.getElementById("homie-ai-effect-defense").checked) effectTypes.push("Defense");
+    if (document.getElementById("homie-ai-effect-support").checked) effectTypes.push("Support");
+    if (document.getElementById("homie-ai-effect-control").checked) effectTypes.push("Control");
+    if (document.getElementById("homie-ai-effect-utility").checked) effectTypes.push("Utility");
+
+    const notes = `
+HOMIE ATTACK REQUEST:
+Target Homie: ${homie.name}
+Type: ${homie.type}
+Role: ${homie.role || "(none)"}
+Power Level: ${powerLevel} (1 = tiny move, 10 = elaborate finisher that can deal 30d12+ damage, apply conditions, and have multi-step effects)
+Desired Effect Types: ${effectTypes.join(", ") || "(none specified)"}
+Attack Concept: ${desc || "(not provided; infer a thematically fitting signature move)"}
+Please create 1–3 high-impact D&D-style homie attacks specifically for this homie.
+Each ability should be suitable for a creature of the homie's stats and role.
+`.trim();
+
+    try {
+      submitBtn.disabled = true;
+      await callGenerateSoulAbilities({
+        notes,
+        statusElement: statusEl,
+        assignToOverride: () => `homie:${homie.id}`
+      });
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
 // ---------- Domains: UI & Logic ----------
 
 function renderDomainSelectForTerritoryHomies() {
@@ -848,6 +891,45 @@ function renderTerritoryHomiesForDomainAssign() {
       opt.selected = true;
     }
     select.appendChild(opt);
+  });
+}
+
+async function generateLairActionsForDomain(domain, { replace, statusElement }) {
+  if (!domain) return;
+
+  if (replace) {
+    state.abilities = state.abilities.filter(
+      (a) => !(a.assignTo === `domain:${domain.id}` && /lair/i.test(a.actionType || ""))
+    );
+  }
+
+  const assignedHomies = state.homies.filter((h) =>
+    (domain.territoryHomieIds || []).includes(h.id)
+  );
+
+  const homieSummary = assignedHomies
+    .map((h) => `${h.name} (${h.role || h.type})`)
+    .join(", ") || "(none)";
+
+  const notes = `
+DOMAIN LAIR ACTION REQUEST:
+Domain Name: ${domain.name}
+Tier: ${domain.tier}
+SPU Invested: ${domain.spuInvested}
+Size / Range: ${domain.size || "(not specified)"}
+Passive Fear DC: ${domain.fearDC || "(not specified)"}
+Environmental Personality: ${domain.personality || "(not specified)"}
+Manual Lair Notes: ${domain.lairActions || "(none)"}
+Assigned Territory Homies: ${homieSummary}
+Please create 3–5 lair actions that fit this domain's theme, scale, and homies.
+Each lair action should be formatted as a D&D-style Lair Action with damage, DCs, conditions, and battlefield changes.
+`.trim();
+
+  await callGenerateSoulAbilities({
+    notes,
+    statusElement,
+    assignToOverride: () => `domain:${domain.id}`,
+    actionTypeOverride: "Lair Action"
   });
 }
 
@@ -895,7 +977,7 @@ function renderDomainList() {
     const line1 = document.createElement("div");
     line1.className = "domain-line";
     line1.innerHTML =
-      `SPU Invested: ${domain.spuInvested || 0} | Size: ${domain.size || "—"}`;
+      `SPU: ${domain.spuInvested || 0} | Size: ${domain.size || "—"}`;
     main.appendChild(line1);
 
     const line2 = document.createElement("div");
@@ -920,7 +1002,6 @@ function renderDomainList() {
     const right = document.createElement("div");
     right.className = "domain-right";
 
-    // Homies
     const homiesLine = document.createElement("div");
     homiesLine.className = "domain-homies-list";
     const homieNames = (domain.territoryHomieIds || [])
@@ -932,23 +1013,57 @@ function renderDomainList() {
     right.appendChild(homiesLine);
 
     if (domain.lairActions) {
-      const lair = document.createElement("div");
-      lair.className = "domain-lair";
-      lair.textContent = `Lair Actions: ${domain.lairActions}`;
-      right.appendChild(lair);
+      const lairManual = document.createElement("div");
+      lairManual.className = "domain-lair";
+      lairManual.textContent = `Manual Lair Notes: ${domain.lairActions}`;
+      right.appendChild(lairManual);
     }
+
+    const lairAbilities = state.abilities.filter(
+      (a) => a.assignTo === `domain:${domain.id}` && /lair/i.test(a.actionType || "")
+    );
+    if (lairAbilities.length) {
+      const lairList = document.createElement("div");
+      lairList.className = "domain-lair-list";
+      lairList.textContent =
+        "AI Lair Actions: " +
+        lairAbilities.map((a) => a.name || "Unnamed").join(" · ");
+      right.appendChild(lairList);
+    }
+
+    const statusEl = document.createElement("div");
+    statusEl.className = "ai-status";
+    right.appendChild(statusEl);
 
     const actions = document.createElement("div");
     actions.className = "homie-actions";
 
+    const genBtn = document.createElement("button");
+    genBtn.type = "button";
+    genBtn.className = "btn secondary";
+    genBtn.textContent = "Generate Lair Actions";
+    genBtn.addEventListener("click", () => {
+      generateLairActionsForDomain(domain, { replace: false, statusElement: statusEl });
+    });
+    actions.appendChild(genBtn);
+
+    const rerollBtn = document.createElement("button");
+    rerollBtn.type = "button";
+    rerollBtn.className = "btn primary";
+    rerollBtn.textContent = "Reroll Lair Actions";
+    rerollBtn.addEventListener("click", () => {
+      if (!confirm(`Delete existing lair actions for "${domain.name}" and generate new ones?`)) return;
+      generateLairActionsForDomain(domain, { replace: true, statusElement: statusEl });
+    });
+    actions.appendChild(rerollBtn);
+
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "btn danger";
-    delBtn.textContent = "Delete";
+    delBtn.textContent = "Delete Domain";
     delBtn.addEventListener("click", () => {
       if (!confirm(`Delete domain "${domain.name || "Unnamed"}"?`)) return;
       state.domains = state.domains.filter((d) => d.id !== domain.id);
-      // Remove references from homies
       state.homies.forEach((h) => {
         if (h.domainId === domain.id) h.domainId = null;
       });
@@ -1014,7 +1129,6 @@ function initDomainForm() {
 
       state.domains.push(domain);
 
-      // Update homies that have been assigned to this domain
       territoryHomieIds.forEach((id) => {
         const homie = state.homies.find((h) => h.id === id);
         if (homie) {
@@ -1041,7 +1155,6 @@ function renderAssignOptionsForAbilities() {
   const currentValue = select.value;
   select.innerHTML = `<option value="">General / Party</option>`;
 
-  // Homies
   state.homies.forEach((h) => {
     const opt = document.createElement("option");
     opt.value = `homie:${h.id}`;
@@ -1049,7 +1162,6 @@ function renderAssignOptionsForAbilities() {
     select.appendChild(opt);
   });
 
-  // Domains
   state.domains.forEach((d) => {
     const opt = document.createElement("option");
     opt.value = `domain:${d.id}`;
@@ -1080,7 +1192,9 @@ function abilityAssignLabel(ability) {
 }
 
 function abilityTextSummary(ability) {
-  return `${ability.name} (${ability.actionType || "Action"}; ${ability.range || "—"}; ${ability.target || "—"}; ${ability.save || "—"}; ${ability.damageDice || "—"}) — ${ability.effect || ""}${ability.combo ? " Combos: " + ability.combo : ""}`;
+  return `${ability.name} (${ability.actionType || "Action"}; ${ability.range || "—"}; ${ability.target || "—"}; ${ability.save || "—"}; ${ability.damageDice || "—"}) — ${ability.effect || ""}${
+    ability.combo ? " Combos: " + ability.combo : ""
+  }`;
 }
 
 async function copyAbilityToClipboard(ability) {
@@ -1089,7 +1203,6 @@ async function copyAbilityToClipboard(ability) {
     await navigator.clipboard.writeText(text);
     alert("Ability copied to clipboard.");
   } catch {
-    // fallback
     prompt("Copy this ability:", text);
   }
 }
@@ -1153,19 +1266,41 @@ function renderAbilityList() {
     line2.textContent = `Save / DC: ${ability.save || "—"} | Damage: ${ability.damageDice || "—"}`;
     main.appendChild(line2);
 
-    if (ability.effect) {
-      const effect = document.createElement("div");
-      effect.className = "ability-effect";
-      effect.textContent = ability.effect;
-      main.appendChild(effect);
-    }
+    // Editable Effect
+    const effectWrapper = document.createElement("div");
+    effectWrapper.className = "ability-effect";
+    const effectLabel = document.createElement("strong");
+    effectLabel.textContent = "Effect:";
+    effectWrapper.appendChild(effectLabel);
 
-    if (ability.combo) {
-      const combo = document.createElement("div");
-      combo.className = "ability-effect";
-      combo.textContent = `Combo / Interactions: ${ability.combo}`;
-      main.appendChild(combo);
-    }
+    const effectSpan = document.createElement("span");
+    effectSpan.className = "editable-block";
+    effectSpan.contentEditable = "true";
+    effectSpan.textContent = ability.effect || "";
+    effectSpan.addEventListener("input", () => {
+      ability.effect = effectSpan.textContent;
+      saveStateToStorage();
+    });
+    effectWrapper.appendChild(effectSpan);
+    main.appendChild(effectWrapper);
+
+    // Editable Combo
+    const comboWrapper = document.createElement("div");
+    comboWrapper.className = "ability-effect";
+    const comboLabel = document.createElement("strong");
+    comboLabel.textContent = "Combo / Interactions:";
+    comboWrapper.appendChild(comboLabel);
+
+    const comboSpan = document.createElement("span");
+    comboSpan.className = "editable-block";
+    comboSpan.contentEditable = "true";
+    comboSpan.textContent = ability.combo || "";
+    comboSpan.addEventListener("input", () => {
+      ability.combo = comboSpan.textContent;
+      saveStateToStorage();
+    });
+    comboWrapper.appendChild(comboSpan);
+    main.appendChild(comboWrapper);
 
     const right = document.createElement("div");
     right.className = "ability-right";
@@ -1213,7 +1348,7 @@ function initAbilityForm() {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      const name = document.getElementById("ability-name").value.trim();
+      const name = document.getElementById("ability-name").value.trim() || "Unnamed Ability";
       const assignTo = document.getElementById("ability-assign").value || "";
       const actionType = document.getElementById("ability-action-type").value.trim();
       const range = document.getElementById("ability-range").value.trim();
@@ -1222,11 +1357,6 @@ function initAbilityForm() {
       const damageDice = document.getElementById("ability-damage").value.trim();
       const effect = document.getElementById("ability-effect").value.trim();
       const combo = document.getElementById("ability-combo").value.trim();
-
-      if (!name) {
-        alert("Please give the ability a name.");
-        return;
-      }
 
       const ability = {
         id: generateId("ability"),
@@ -1247,16 +1377,93 @@ function initAbilityForm() {
       renderAll();
 
       form.reset();
+      document.getElementById("ability-power").value = 7;
     });
   }
 }
 
-// ---------- AI Integration ----------
+// Ability AI controls (Panel 4)
+function initAbilityAiControls() {
+  const btn = document.getElementById("ability-ai-btn");
+  if (!btn) return;
+  const statusEl = document.getElementById("ability-ai-status");
 
-async function callGenerateSoulAbilities(notes) {
-  const aiStatus = document.getElementById("ai-status");
-  if (aiStatus) {
-    aiStatus.textContent = "Whispering with the souls...";
+  btn.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const nameSeed = document.getElementById("ability-name").value.trim();
+    const assignToValue = document.getElementById("ability-assign").value || "";
+    const powerLevel = Number(document.getElementById("ability-power").value) || 7;
+    const soulCost = document.getElementById("ability-soul-cost").value.trim();
+
+    const effectTypes = [];
+    if (document.getElementById("ability-effect-offense").checked) effectTypes.push("Offense");
+    if (document.getElementById("ability-effect-defense").checked) effectTypes.push("Defense");
+    if (document.getElementById("ability-effect-support").checked) effectTypes.push("Support");
+    if (document.getElementById("ability-effect-control").checked) effectTypes.push("Control");
+    if (document.getElementById("ability-effect-utility").checked) effectTypes.push("Utility");
+    if (document.getElementById("ability-effect-reality").checked) effectTypes.push("Reality-Bending");
+
+    const outcomeTypes = [];
+    if (document.getElementById("ability-outcome-barrier").checked) outcomeTypes.push("Barrier / Shield");
+    if (document.getElementById("ability-outcome-restrain").checked) outcomeTypes.push("Restrain / Bind");
+    if (document.getElementById("ability-outcome-area").checked) outcomeTypes.push("Area Denial / Zone");
+    if (document.getElementById("ability-outcome-morph").checked) outcomeTypes.push("Morphing / Weapon Form");
+    if (document.getElementById("ability-outcome-overcharge").checked) outcomeTypes.push("Overcharge / Self-Buff");
+    if (document.getElementById("ability-outcome-mobility").checked) outcomeTypes.push("Mobility / Gap Closer / Escape");
+    if (document.getElementById("ability-outcome-debuff").checked) outcomeTypes.push("Debuff / Weakening");
+    if (document.getElementById("ability-outcome-explosion").checked) outcomeTypes.push("Explosion / Burst");
+    if (document.getElementById("ability-outcome-highdmg").checked) outcomeTypes.push("High Damage / Burst Focus");
+    if (document.getElementById("ability-outcome-battlefield").checked) outcomeTypes.push("Battlefield Control");
+    if (document.getElementById("ability-outcome-finisher").checked) outcomeTypes.push("Signature Finisher / Ultimate");
+
+    const effectNotes = document.getElementById("ability-effect-notes").value.trim();
+    const outcomeNotes = document.getElementById("ability-outcome-notes").value.trim();
+
+    const manualEffect = document.getElementById("ability-effect").value.trim();
+    const manualCombo = document.getElementById("ability-combo").value.trim();
+
+    const assignOverrideFn = assignToValue ? () => assignToValue : null;
+
+    const notes = `
+GENERAL / COMBO ABILITY REQUEST:
+Name seed (optional): ${nameSeed || "(none, you choose a cool name)"}
+Assigned To: ${assignToValue || "General / Party"}
+Power Level: ${powerLevel} (1 = very simple / low damage, 10 = multi-step signature finisher with huge damage and effects)
+Soul Cost (if any): ${soulCost || "(unspecified)"}
+
+Desired Effect Types: ${effectTypes.join(", ") || "(none specified)"}
+Extra Effect Notes: ${effectNotes || "(none)"}
+
+Desired Outcomes / Shapes: ${outcomeTypes.join(", ") || "(none specified)"}
+Outcome / Effect Notes: ${outcomeNotes || "(none)"}
+
+If manual text is present, you may refine it:
+Manual Effect Draft: ${manualEffect || "(none)"}
+Manual Combo Draft: ${manualCombo || "(none)"}
+
+Please create 1–3 abilities that match these settings, with D&D-ready mechanics (to-hit or saves, DCs, damage dice like up to 30d12 when appropriate, conditions, and battlefield control).
+`.trim();
+
+    try {
+      btn.disabled = true;
+      await callGenerateSoulAbilities({
+        notes,
+        statusElement: statusEl,
+        assignToOverride: assignOverrideFn || undefined
+      });
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// ---------- AI Integration (shared helper) ----------
+
+async function callGenerateSoulAbilities({ notes, statusElement, assignToOverride, actionTypeOverride }) {
+  const status = statusElement || null;
+  if (status) {
+    status.textContent = "Whispering with the souls...";
   }
 
   try {
@@ -1274,18 +1481,21 @@ async function callGenerateSoulAbilities(notes) {
     });
 
     if (!res.ok) {
-      throw new Error(`Server responded with status ${res.status}`);
+      const text = await res.text();
+      console.error("OpenAI API error:", text);
+      if (status) status.textContent = "Error contacting the souls (API error).";
+      alert("Failed to contact the AI ability forge. See console for details.");
+      return [];
     }
 
     const data = await res.json();
-
     const abilitiesFromAI = Array.isArray(data.abilities) ? data.abilities : [];
 
     const mapped = abilitiesFromAI.map((a) => ({
       id: generateId("ability"),
       name: a.name || "AI Ability",
-      assignTo: a.assignTo || "",
-      actionType: a.actionType || "",
+      assignTo: assignToOverride ? assignToOverride(a) : (a.assignTo || ""),
+      actionType: actionTypeOverride || a.actionType || "",
       range: a.range || "",
       target: a.target || "",
       save: a.saveOrDC || a.save || "",
@@ -1299,34 +1509,23 @@ async function callGenerateSoulAbilities(notes) {
     saveStateToStorage();
     renderAll();
 
-    if (aiStatus) {
+    if (status) {
       if (mapped.length > 0) {
-        aiStatus.textContent = `Souls answered: ${mapped.length} abilities forged.`;
+        status.textContent = `Souls answered: ${mapped.length} abilities forged.`;
       } else {
-        aiStatus.textContent = "Souls whispered, but no structured abilities were returned. Check the server logs or adjust your prompt.";
+        status.textContent = "Souls whispered, but no structured abilities were returned.";
       }
     }
+
+    return mapped;
   } catch (err) {
     console.error(err);
-    if (aiStatus) {
-      aiStatus.textContent = "Error contacting the souls. Check your network or API key.";
+    if (status) {
+      status.textContent = "Error contacting the souls. Check your network or API key.";
     }
     alert("Failed to contact the AI ability forge. See console for details.");
+    return [];
   }
-}
-
-function initAiPanel() {
-  const btn = document.getElementById("ai-generate-btn");
-  if (!btn) return;
-
-  btn.addEventListener("click", async () => {
-    const notes = document.getElementById("ai-notes").value.trim();
-    btn.disabled = true;
-    btn.textContent = "Consulting the Souls...";
-    await callGenerateSoulAbilities(notes);
-    btn.disabled = false;
-    btn.textContent = "Ask the Souls (Generate Abilities)";
-  });
 }
 
 // ---------- Summary / Dashboard ----------
@@ -1504,7 +1703,7 @@ function initSummaryPanel() {
   }
 }
 
-// ---------- Print ----------
+// ---------- Print & Top Controls ----------
 
 function initPrintButton() {
   const btn = document.getElementById("print-summary-btn");
@@ -1513,8 +1712,6 @@ function initPrintButton() {
     window.print();
   });
 }
-
-// ---------- Top-level Controls ----------
 
 function initTopControls() {
   const saveBtn = document.getElementById("save-state-btn");
@@ -1541,6 +1738,7 @@ function renderAll() {
   renderDomainList();
   renderTerritoryHomiesForDomainAssign();
   renderDomainSelectForTerritoryHomies();
+  renderHomieSelectForAi();
   renderAssignOptionsForAbilities();
   renderAbilityList();
   renderSummaryList();
@@ -1559,7 +1757,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initHomieForm();
   initDomainForm();
   initAbilityForm();
-  initAiPanel();
+  initHomieAiForm();
+  initAbilityAiControls();
   initSummaryPanel();
   renderAll();
 });
