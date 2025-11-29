@@ -4,6 +4,9 @@ const errorBanner = document.getElementById("app-error-banner");
 const errorText = document.getElementById("app-error-text");
 const errorCloseBtn = document.getElementById("app-error-close");
 
+let lastAlertTime = 0;
+const ALERT_COOLDOWN_MS = 4000;
+
 function showError(message, err) {
   console.error("[Soul Workshop Error]", message, err || "");
   if (errorText) {
@@ -11,6 +14,15 @@ function showError(message, err) {
   }
   if (errorBanner) {
     errorBanner.classList.remove("hidden");
+  }
+  const now = Date.now();
+  if (now - lastAlertTime > ALERT_COOLDOWN_MS) {
+    lastAlertTime = now;
+    try {
+      alert(message);
+    } catch (e) {
+      // ignore alert failure (some environments block it)
+    }
   }
 }
 
@@ -46,10 +58,10 @@ function loadState() {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object") {
-      state.souls = parsed.souls || [];
-      state.homies = parsed.homies || [];
-      state.domains = parsed.domains || [];
-      state.abilities = parsed.abilities || [];
+      state.souls = Array.isArray(parsed.souls) ? parsed.souls : [];
+      state.homies = Array.isArray(parsed.homies) ? parsed.homies : [];
+      state.domains = Array.isArray(parsed.domains) ? parsed.domains : [];
+      state.abilities = Array.isArray(parsed.abilities) ? parsed.abilities : [];
     }
   } catch (err) {
     showError("Failed to load saved data from localStorage.", err);
@@ -108,12 +120,22 @@ function setupPanelToggles() {
 // ============== SPU totals ==============
 
 function recalcSpuTotals() {
-  const totalSPU = state.souls.reduce((sum, s) => sum + (s.spu || 0), 0);
-  // Homie SPU: initial + upgrade + revival
-  const homieSpent = state.homies.reduce((sum, h) => {
-    return sum + (h.totalSPUInvested || 0) + (h.revivalSPUSpent || 0);
+  const soulsArray = Array.isArray(state.souls) ? state.souls : [];
+  const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+  const domainsArray = Array.isArray(state.domains) ? state.domains : [];
+
+  const totalSPU = soulsArray.reduce((sum, s) => sum + (Number(s.spu) || 0), 0);
+  const homieSpent = homiesArray.reduce((sum, h) => {
+    return (
+      sum +
+      (Number(h.totalSPUInvested) || 0) +
+      (Number(h.revivalSPUSpent) || 0)
+    );
   }, 0);
-  const domainSpent = state.domains.reduce((sum, d) => sum + (d.spuInvested || 0), 0);
+  const domainSpent = domainsArray.reduce(
+    (sum, d) => sum + (Number(d.spuInvested) || 0),
+    0
+  );
 
   const spentSPU = homieSpent + domainSpent;
   const availableSPU = totalSPU - spentSPU;
@@ -129,33 +151,52 @@ function recalcSpuTotals() {
   }
 }
 
-// ============== Panel 1: Soul Rating & Bank ==============
+// ============== DOM refs (assigned in init) ==============
 
-const creatureNameInput = document.getElementById("creature-name");
-const rawMightInput = document.getElementById("raw-might");
-const proficiencyTierSelect = document.getElementById("proficiency-tier");
-const willpowerInput = document.getElementById("willpower-level");
-const combinedSoulRatingSpan = document.getElementById("combined-soul-rating");
-const soulLevelSpan = document.getElementById("soul-level");
-const soulEnergySpan = document.getElementById("soul-energy");
-const soulMaxHpLostSpan = document.getElementById("soul-max-hp-lost");
-const soulTraitsInput = document.getElementById("soul-traits");
-const soulNotesInput = document.getElementById("soul-notes");
-const soulFilterInput = document.getElementById("soul-filter-input");
-const soulBankList = document.getElementById("soul-bank-list");
+let creatureNameInput,
+  rawMightInput,
+  proficiencyTierSelect,
+  willpowerInput,
+  combinedSoulRatingSpan,
+  soulLevelSpan,
+  soulEnergySpan,
+  soulMaxHpLostSpan,
+  soulTraitsInput,
+  soulNotesInput,
+  soulFilterInput,
+  soulBankList;
+
+let homieLinkedSoulSelect,
+  homieAssignedDomainSelect,
+  homieRosterList,
+  homieFilterInput;
+
+let domainList,
+  domainFilterInput;
+
+let abilityList,
+  abilityFilterInput;
+
+let summaryList;
+
+// ============== Panel 1: Soul Rating & Bank ==============
 
 let lastSoulCalculation = null;
 
 function calculateSoulFromInputs() {
   try {
     const rawMight = clamp(Number(rawMightInput.value) || 0, 1, 10);
-    const proficiencyTier = clamp(Number(proficiencyTierSelect.value) || 0, 0, 9);
+    const proficiencyTier = clamp(
+      Number(proficiencyTierSelect.value) || 0,
+      0,
+      9
+    );
     const willpower = clamp(Number(willpowerInput.value) || 0, 1, 10);
 
     const combinedRating = rawMight * 2 + proficiencyTier * 3 + willpower * 4;
     const soulLevel = clamp(Math.ceil(combinedRating / 9), 1, 10);
 
-    const maxCSR = 87; // (10*2 + 9*3 + 10*4)
+    const maxCSR = 87; // 10*2 + 9*3 + 10*4
     const ratio = combinedRating / maxCSR;
     const spu = Math.round(Math.pow(ratio, 2) * 1000);
     const hpLost = Math.round(spu / 25);
@@ -177,16 +218,27 @@ function calculateSoulFromInputs() {
 }
 
 function addSoulToBank() {
-  if (!lastSoulCalculation) {
-    calculateSoulFromInputs();
-  }
   try {
-    const base = lastSoulCalculation || { combinedRating: 0, soulLevel: 1, spu: 0, hpLost: 0 };
+    if (!lastSoulCalculation) {
+      calculateSoulFromInputs();
+    }
+    const base =
+      lastSoulCalculation || {
+        combinedRating: 0,
+        soulLevel: 1,
+        spu: 0,
+        hpLost: 0,
+      };
+
     const newSoul = {
       id: generateId("soul"),
       name: creatureNameInput.value || "Unnamed Soul",
       rawMight: clamp(Number(rawMightInput.value) || 0, 1, 10),
-      proficiencyTier: clamp(Number(proficiencyTierSelect.value) || 0, 0, 9),
+      proficiencyTier: clamp(
+        Number(proficiencyTierSelect.value) || 0,
+        0,
+        9
+      ),
       willpower: clamp(Number(willpowerInput.value) || 0, 1, 10),
       combinedRating: base.combinedRating,
       soulLevel: base.soulLevel,
@@ -197,6 +249,8 @@ function addSoulToBank() {
       availableForCrafting: true,
       soulRipImmune: false,
     };
+
+    if (!Array.isArray(state.souls)) state.souls = [];
     state.souls.push(newSoul);
     saveState();
     renderSoulBank();
@@ -211,8 +265,9 @@ function renderSoulBank() {
   if (!soulBankList) return;
   soulBankList.innerHTML = "";
   const filter = (soulFilterInput.value || "").toLowerCase().trim();
+  const soulsArray = Array.isArray(state.souls) ? state.souls : [];
 
-  const souls = state.souls.filter((s) => {
+  const souls = soulsArray.filter((s) => {
     if (!filter) return true;
     return (
       (s.name && s.name.toLowerCase().includes(filter)) ||
@@ -222,7 +277,8 @@ function renderSoulBank() {
 
   if (!souls.length) {
     soulBankList.classList.add("empty-message");
-    soulBankList.innerHTML = "<p>No souls match that filter yet.</p>";
+    soulBankList.innerHTML =
+      "<p>No souls match that filter yet.</p>";
     return;
   }
   soulBankList.classList.remove("empty-message");
@@ -275,7 +331,9 @@ function renderSoulBank() {
     section.className = "entity-card-section";
     section.innerHTML = `
       <div><strong>Rating:</strong> ${soul.combinedRating}</div>
-      <div><strong>Raw Might:</strong> ${soul.rawMight} | <strong>Tier:</strong> ${soul.proficiencyTier} | <strong>Willpower:</strong> ${soul.willpower}</div>
+      <div><strong>Raw Might:</strong> ${soul.rawMight} | <strong>Tier:</strong> ${
+      soul.proficiencyTier
+    } | <strong>Willpower:</strong> ${soul.willpower}</div>
       <div><strong>Suggested Max HP Lost:</strong> ${soul.maxHpLost}</div>
       <div><strong>Traits:</strong> ${soul.traits || "—"}</div>
       <div><strong>Notes:</strong></div>
@@ -298,7 +356,9 @@ function renderSoulBank() {
 
     const craftingToggle = document.createElement("button");
     craftingToggle.className = "btn small outline";
-    craftingToggle.textContent = soul.availableForCrafting ? "Mark Unavailable" : "Mark Available";
+    craftingToggle.textContent = soul.availableForCrafting
+      ? "Mark Unavailable"
+      : "Mark Available";
     craftingToggle.addEventListener("click", () => {
       soul.availableForCrafting = !soul.availableForCrafting;
       saveState();
@@ -307,7 +367,9 @@ function renderSoulBank() {
 
     const immuneToggle = document.createElement("button");
     immuneToggle.className = "btn small outline";
-    immuneToggle.textContent = soul.soulRipImmune ? "Clear Soul-Rip Immune" : "Mark Soul-Rip Immune (24h)";
+    immuneToggle.textContent = soul.soulRipImmune
+      ? "Clear Soul-Rip Immune"
+      : "Mark Soul-Rip Immune (24h)";
     immuneToggle.addEventListener("click", () => {
       soul.soulRipImmune = !soul.soulRipImmune;
       saveState();
@@ -343,33 +405,29 @@ function renderSoulBank() {
 
 // ============== Panel 2: Homies ==============
 
-const homieLinkedSoulSelect = document.getElementById("homie-linked-soul");
-const homieAssignedDomainSelect = document.getElementById("homie-assigned-domain");
-const homieRosterList = document.getElementById("homie-roster-list");
-const homieFilterInput = document.getElementById("homie-filter-input");
-
 function populateSoulSelects() {
   if (!homieLinkedSoulSelect) return;
   const oldValue = homieLinkedSoulSelect.value;
-  homieLinkedSoulSelect.innerHTML = '<option value="">— None / Composite —</option>';
-  state.souls.forEach((soul) => {
+  homieLinkedSoulSelect.innerHTML =
+    '<option value="">— None / Composite —</option>';
+  const soulsArray = Array.isArray(state.souls) ? state.souls : [];
+  soulsArray.forEach((soul) => {
     const opt = document.createElement("option");
     opt.value = soul.id;
     opt.textContent = `${soul.name} (${soul.spu} SPU)`;
     homieLinkedSoulSelect.appendChild(opt);
   });
   homieLinkedSoulSelect.value = oldValue;
-
-  // Also for AI context if needed later; no extra selects here.
 }
 
 function populateDomainSelects() {
   const selects = [homieAssignedDomainSelect];
+  const domainsArray = Array.isArray(state.domains) ? state.domains : [];
   selects.forEach((sel) => {
     if (!sel) return;
     const prev = sel.value;
     sel.innerHTML = '<option value="">— None yet —</option>';
-    state.domains.forEach((d) => {
+    domainsArray.forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d.id;
       opt.textContent = d.name;
@@ -378,12 +436,16 @@ function populateDomainSelects() {
     sel.value = prev;
   });
 
-  // Domain Territory Homies multiselect
-  const domainTerritorySelect = document.getElementById("domain-territory-homies");
+  const domainTerritorySelect = document.getElementById(
+    "domain-territory-homies"
+  );
   if (domainTerritorySelect) {
-    const selectedValues = Array.from(domainTerritorySelect.selectedOptions).map((o) => o.value);
+    const selectedValues = Array.from(
+      domainTerritorySelect.selectedOptions
+    ).map((o) => o.value);
     domainTerritorySelect.innerHTML = "";
-    state.homies
+    const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+    homiesArray
       .filter((h) => h.type === "Territory")
       .forEach((h) => {
         const opt = document.createElement("option");
@@ -399,14 +461,19 @@ function populateAbilityAssignSelect() {
   const assignSelect = document.getElementById("ability-assign-to");
   if (!assignSelect) return;
   const prev = assignSelect.value;
-  assignSelect.innerHTML = '<option value="General / Party">General / Party</option>';
-  state.homies.forEach((h) => {
+  assignSelect.innerHTML =
+    '<option value="General / Party">General / Party</option>';
+
+  const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+  const domainsArray = Array.isArray(state.domains) ? state.domains : [];
+
+  homiesArray.forEach((h) => {
     const opt = document.createElement("option");
     opt.value = h.name;
     opt.textContent = `Homie: ${h.name}`;
     assignSelect.appendChild(opt);
   });
-  state.domains.forEach((d) => {
+  domainsArray.forEach((d) => {
     const opt = document.createElement("option");
     opt.value = `Domain: ${d.name}`;
     opt.textContent = `Domain: ${d.name}`;
@@ -414,12 +481,11 @@ function populateAbilityAssignSelect() {
   });
   assignSelect.value = prev || "General / Party";
 
-  // Also AI homie target
   const aiTarget = document.getElementById("ai-homie-target");
   if (aiTarget) {
     const prevT = aiTarget.value;
     aiTarget.innerHTML = '<option value="">— Select Homie —</option>';
-    state.homies.forEach((h) => {
+    homiesArray.forEach((h) => {
       const opt = document.createElement("option");
       opt.value = h.id;
       opt.textContent = h.name;
@@ -431,21 +497,30 @@ function populateAbilityAssignSelect() {
 
 function createHomieFromForm() {
   try {
-    const name = document.getElementById("homie-name").value || "Unnamed Homie";
+    const name =
+      document.getElementById("homie-name").value || "Unnamed Homie";
     const type = document.getElementById("homie-type").value || "Minor";
     const linkedSoulId = homieLinkedSoulSelect.value || "";
-    const initialSPU = Math.max(0, Number(document.getElementById("homie-initial-spu").value) || 0);
+    const initialSPU = Math.max(
+      0,
+      Number(document.getElementById("homie-initial-spu").value) || 0
+    );
     const role = document.getElementById("homie-role").value || "";
     const hp = document.getElementById("homie-hp").value || "";
     const ac = document.getElementById("homie-ac").value || "";
     const move = document.getElementById("homie-move").value || "";
-    const primaryDamage = document.getElementById("homie-primary-damage").value || "";
-    const abilities = document.getElementById("homie-abilities").value || "";
+    const primaryDamage =
+      document.getElementById("homie-primary-damage").value || "";
+    const abilities =
+      document.getElementById("homie-abilities").value || "";
     const traits = document.getElementById("homie-traits").value || "";
-    const boundLocation = document.getElementById("homie-bound-location").value || "";
+    const boundLocation =
+      document.getElementById("homie-bound-location").value || "";
     const assignedDomainId = homieAssignedDomainSelect.value || "";
-    const territoryActions = document.getElementById("homie-territory-actions").value || "";
-    const buffEffects = document.getElementById("homie-buff-effects").value || "";
+    const territoryActions =
+      document.getElementById("homie-territory-actions").value || "";
+    const buffEffects =
+      document.getElementById("homie-buff-effects").value || "";
 
     const homie = {
       id: generateId("homie"),
@@ -476,6 +551,7 @@ function createHomieFromForm() {
       summaryNotes: "",
     };
 
+    if (!Array.isArray(state.homies)) state.homies = [];
     state.homies.push(homie);
     saveState();
     renderHomies();
@@ -521,7 +597,9 @@ function renderHomies() {
   if (!homieRosterList) return;
   homieRosterList.innerHTML = "";
   const filter = (homieFilterInput.value || "").toLowerCase().trim();
-  const homies = state.homies.filter((h) => {
+  const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+
+  const homies = homiesArray.filter((h) => {
     if (!filter) return true;
     return (
       (h.name && h.name.toLowerCase().includes(filter)) ||
@@ -531,7 +609,8 @@ function renderHomies() {
 
   if (!homies.length) {
     homieRosterList.classList.add("empty-message");
-    homieRosterList.innerHTML = "<p>No Homies match that filter yet.</p>";
+    homieRosterList.innerHTML =
+      "<p>No Homies match that filter yet.</p>";
     return;
   }
   homieRosterList.classList.remove("empty-message");
@@ -575,17 +654,23 @@ function renderHomies() {
 
     const left = document.createElement("div");
     left.className = "entity-card-section";
-    const linkedSoul = state.souls.find((s) => s.id === h.linkedSoulId);
-    const domain = state.domains.find((d) => d.id === h.assignedDomainId);
+    const soulsArray = Array.isArray(state.souls) ? state.souls : [];
+    const linkedSoul = soulsArray.find((s) => s.id === h.linkedSoulId);
+    const domainsArray = Array.isArray(state.domains) ? state.domains : [];
+    const domain = domainsArray.find((d) => d.id === h.assignedDomainId);
 
     left.innerHTML = `
       <div><strong>Role:</strong> ${h.role || "—"}</div>
-      <div><strong>HP:</strong> ${h.hp || "—"} | <strong>AC:</strong> ${h.ac || "—"} | <strong>Move:</strong> ${
-      h.move || "—"
-    }</div>
+      <div><strong>HP:</strong> ${h.hp || "—"} | <strong>AC:</strong> ${
+      h.ac || "—"
+    } | <strong>Move:</strong> ${h.move || "—"}</div>
       <div><strong>Primary Damage:</strong> ${h.primaryDamage || "—"}</div>
-      <div><strong>Linked Soul:</strong> ${linkedSoul ? linkedSoul.name : "—"}</div>
-      <div><strong>Assigned Domain:</strong> ${domain ? domain.name : "—"}</div>
+      <div><strong>Linked Soul:</strong> ${
+        linkedSoul ? linkedSoul.name : "—"
+      }</div>
+      <div><strong>Assigned Domain:</strong> ${
+        domain ? domain.name : "—"
+      }</div>
     `;
 
     const right = document.createElement("div");
@@ -653,22 +738,36 @@ function renderHomies() {
 
 // ============== Panel 3: Domains ==============
 
-const domainList = document.getElementById("domain-list");
-const domainFilterInput = document.getElementById("domain-filter-input");
-
 function createDomainFromForm() {
   try {
-    const name = document.getElementById("domain-name").value || "Unnamed Domain";
-    const tier = clamp(Number(document.getElementById("domain-tier").value) || 1, 1, 10);
-    const spuInvested = Math.max(0, Number(document.getElementById("domain-spu").value) || 0);
+    const name =
+      document.getElementById("domain-name").value || "Unnamed Domain";
+    const tier = clamp(
+      Number(document.getElementById("domain-tier").value) || 1,
+      1,
+      10
+    );
+    const spuInvested = Math.max(
+      0,
+      Number(document.getElementById("domain-spu").value) || 0
+    );
     const size = document.getElementById("domain-size").value || "";
-    const fearDC = Number(document.getElementById("domain-fear-dc").value) || 0;
-    const personality = document.getElementById("domain-personality").value || "";
-    const lairActions = document.getElementById("domain-lair-actions").value || "";
-    const notes = document.getElementById("domain-notes").value || "";
+    const fearDC = Number(
+      document.getElementById("domain-fear-dc").value
+    ) || 0;
+    const personality =
+      document.getElementById("domain-personality").value || "";
+    const lairActions =
+      document.getElementById("domain-lair-actions").value || "";
+    const notes =
+      document.getElementById("domain-notes").value || "";
 
-    const territorySelect = document.getElementById("domain-territory-homies");
-    const assignedHomieIds = Array.from(territorySelect.selectedOptions).map((o) => o.value);
+    const territorySelect = document.getElementById(
+      "domain-territory-homies"
+    );
+    const assignedHomieIds = Array.from(
+      territorySelect.selectedOptions
+    ).map((o) => o.value);
 
     const domain = {
       id: generateId("domain"),
@@ -683,6 +782,7 @@ function createDomainFromForm() {
       homieIds: assignedHomieIds,
     };
 
+    if (!Array.isArray(state.domains)) state.domains = [];
     state.domains.push(domain);
     saveState();
     recalcSpuTotals();
@@ -707,12 +807,16 @@ async function generateDomainLairActions(domain) {
     if (!aiResult || !aiResult.structured) {
       throw new Error("AI did not return structured lair actions.");
     }
-    domain.lairActions = aiResult.structured.lairActions || aiResult.text || "";
+    domain.lairActions =
+      aiResult.structured.lairActions || aiResult.text || "";
     saveState();
     renderDomains();
     renderSummary();
   } catch (err) {
-    showError(`Failed to generate lair actions for ${domain.name}.`, err);
+    showError(
+      `Failed to generate lair actions for ${domain.name}.`,
+      err
+    );
   }
 }
 
@@ -720,14 +824,18 @@ function renderDomains() {
   if (!domainList) return;
   domainList.innerHTML = "";
   const filter = (domainFilterInput.value || "").toLowerCase().trim();
-  const domains = state.domains.filter((d) => {
+  const domainsArray = Array.isArray(state.domains) ? state.domains : [];
+  const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+
+  const domains = domainsArray.filter((d) => {
     if (!filter) return true;
     return d.name && d.name.toLowerCase().includes(filter);
   });
 
   if (!domains.length) {
     domainList.classList.add("empty-message");
-    domainList.innerHTML = "<p>No Domains match that filter yet.</p>";
+    domainList.innerHTML =
+      "<p>No Domains match that filter yet.</p>";
     return;
   }
   domainList.classList.remove("empty-message");
@@ -769,14 +877,16 @@ function renderDomains() {
 
     const left = document.createElement("div");
     left.className = "entity-card-section";
-    const homieNames = d.homieIds
-      .map((id) => state.homies.find((h) => h.id === id))
+    const homieNames = (d.homieIds || [])
+      .map((id) => homiesArray.find((h) => h.id === id))
       .filter(Boolean)
       .map((h) => h.name);
     left.innerHTML = `
       <div><strong>Control Radius:</strong> ${d.size || "—"}</div>
       <div><strong>Personality:</strong> ${d.personality || "—"}</div>
-      <div><strong>Territory Homies:</strong> ${homieNames.join(", ") || "—"}</div>
+      <div><strong>Territory Homies:</strong> ${
+        homieNames.join(", ") || "—"
+      }</div>
     `;
 
     const right = document.createElement("div");
@@ -819,7 +929,9 @@ function renderDomains() {
     const aiBtn = document.createElement("button");
     aiBtn.className = "btn small secondary";
     aiBtn.textContent = "AI: Generate / Reroll Lair Actions";
-    aiBtn.addEventListener("click", () => generateDomainLairActions(d));
+    aiBtn.addEventListener("click", () =>
+      generateDomainLairActions(d)
+    );
     footer.appendChild(aiBtn);
 
     const deleteBtn = document.createElement("button");
@@ -850,13 +962,10 @@ function renderDomains() {
 
 // ============== Panel 4: Abilities ==============
 
-const abilityList = document.getElementById("ability-list");
-const abilityFilterInput = document.getElementById("ability-filter-input");
-
 function getCheckedValues(name) {
-  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(
-    (el) => el.value
-  );
+  return Array.from(
+    document.querySelectorAll(`input[name="${name}"]:checked`)
+  ).map((el) => el.value);
 }
 
 function createAbility(manualFields) {
@@ -899,6 +1008,7 @@ function createAbility(manualFields) {
     origin: origin || "Manual",
   };
 
+  if (!Array.isArray(state.abilities)) state.abilities = [];
   state.abilities.push(ability);
   saveState();
   renderAbilities();
@@ -908,20 +1018,31 @@ function createAbility(manualFields) {
 function createAbilityFromForm(origin = "Manual") {
   try {
     const name = document.getElementById("ability-name").value;
-    const assignTo = document.getElementById("ability-assign-to").value;
-    const actionType = document.getElementById("ability-action-type").value;
+    const assignTo =
+      document.getElementById("ability-assign-to").value;
+    const actionType =
+      document.getElementById("ability-action-type").value;
     const range = document.getElementById("ability-range").value;
     const target = document.getElementById("ability-target").value;
     const saveDC = document.getElementById("ability-save-dc").value;
     const damage = document.getElementById("ability-damage").value;
-    const powerLevel = Number(document.getElementById("ability-power-level").value) || 0;
-    const soulCost = Number(document.getElementById("ability-soul-cost").value) || 0;
+    const powerLevel =
+      Number(
+        document.getElementById("ability-power-level").value
+      ) || 0;
+    const soulCost =
+      Number(document.getElementById("ability-soul-cost").value) ||
+      0;
     const effectTypes = getCheckedValues("ability-effect-types");
-    const effectNotes = document.getElementById("ability-effect-notes").value;
+    const effectNotes =
+      document.getElementById("ability-effect-notes").value;
     const outcomeTypes = getCheckedValues("ability-outcome-types");
-    const outcomeNotes = document.getElementById("ability-outcome-notes").value;
-    const mechanicalEffect = document.getElementById("ability-mechanical-effect").value;
-    const comboNotes = document.getElementById("ability-combo-notes").value;
+    const outcomeNotes =
+      document.getElementById("ability-outcome-notes").value;
+    const mechanicalEffect =
+      document.getElementById("ability-mechanical-effect").value;
+    const comboNotes =
+      document.getElementById("ability-combo-notes").value;
 
     createAbility({
       name,
@@ -948,14 +1069,23 @@ function createAbilityFromForm(origin = "Manual") {
 
 async function createAbilityViaAI() {
   try {
-    const assignTo = document.getElementById("ability-assign-to").value;
-    const powerLevel = Number(document.getElementById("ability-power-level").value) || 0;
-    const soulCost = Number(document.getElementById("ability-soul-cost").value) || 0;
+    const assignTo =
+      document.getElementById("ability-assign-to").value;
+    const powerLevel =
+      Number(
+        document.getElementById("ability-power-level").value
+      ) || 0;
+    const soulCost =
+      Number(document.getElementById("ability-soul-cost").value) ||
+      0;
     const effectTypes = getCheckedValues("ability-effect-types");
     const outcomeTypes = getCheckedValues("ability-outcome-types");
-    const effectNotes = document.getElementById("ability-effect-notes").value;
-    const outcomeNotes = document.getElementById("ability-outcome-notes").value;
-    const extraNotes = document.getElementById("ability-combo-notes").value;
+    const effectNotes =
+      document.getElementById("ability-effect-notes").value;
+    const outcomeNotes =
+      document.getElementById("ability-outcome-notes").value;
+    const extraNotes =
+      document.getElementById("ability-combo-notes").value;
 
     const payload = {
       mode: "genericAbility",
@@ -978,18 +1108,29 @@ async function createAbilityViaAI() {
     }
     const ab = aiResult.structured;
 
-    document.getElementById("ability-name").value = ab.abilityName || assignTo + " Soul Technique";
-    document.getElementById("ability-action-type").value = ab.actionType || "Action";
-    document.getElementById("ability-range").value = ab.range || "";
-    document.getElementById("ability-target").value = ab.target || "";
-    document.getElementById("ability-save-dc").value = ab.saveDC || "";
-    document.getElementById("ability-damage").value = ab.damageDice || "";
+    document.getElementById("ability-name").value =
+      ab.abilityName || assignTo + " Soul Technique";
+    document.getElementById("ability-action-type").value =
+      ab.actionType || "Action";
+    document.getElementById("ability-range").value =
+      ab.range || "";
+    document.getElementById("ability-target").value =
+      ab.target || "";
+    document.getElementById("ability-save-dc").value =
+      ab.saveDC || "";
+    document.getElementById("ability-damage").value =
+      ab.damageDice || "";
     document.getElementById("ability-mechanical-effect").value =
       ab.mechanicalEffect || aiResult.text || "";
-    document.getElementById("ability-combo-notes").value = ab.comboNotes || "";
+    document.getElementById("ability-combo-notes").value =
+      ab.comboNotes || "";
 
-    autoResizeTextarea(document.getElementById("ability-mechanical-effect"));
-    autoResizeTextarea(document.getElementById("ability-combo-notes"));
+    autoResizeTextarea(
+      document.getElementById("ability-mechanical-effect")
+    );
+    autoResizeTextarea(
+      document.getElementById("ability-combo-notes")
+    );
 
     createAbilityFromForm("AI");
   } catch (err) {
@@ -999,19 +1140,27 @@ async function createAbilityViaAI() {
 
 async function generateHomieAttackViaAI() {
   try {
-    const targetId = document.getElementById("ai-homie-target").value;
+    const targetId =
+      document.getElementById("ai-homie-target").value;
     if (!targetId) {
       showError("Please select a Homie for the AI attack.", null);
       return;
     }
-    const homie = state.homies.find((h) => h.id === targetId);
+    const homiesArray = Array.isArray(state.homies)
+      ? state.homies
+      : [];
+    const homie = homiesArray.find((h) => h.id === targetId);
     if (!homie) {
       showError("Selected Homie not found.", null);
       return;
     }
-    const concept = document.getElementById("ai-homie-concept").value || "";
+    const concept =
+      document.getElementById("ai-homie-concept").value || "";
     const effectTypes = getCheckedValues("ai-homie-effect-types");
-    const powerLevel = Number(document.getElementById("ai-homie-power-level").value) || 0;
+    const powerLevel =
+      Number(
+        document.getElementById("ai-homie-power-level").value
+      ) || 0;
 
     const payload = {
       mode: "homieAttack",
@@ -1044,7 +1193,8 @@ async function generateHomieAttackViaAI() {
       effectNotes: concept || "",
       outcomeTypes: [],
       outcomeNotes: "",
-      mechanicalEffect: ab.mechanicalEffect || aiResult.text || "",
+      mechanicalEffect:
+        ab.mechanicalEffect || aiResult.text || "",
       comboNotes: ab.comboNotes || "",
       origin: "AI Homie Attack",
     });
@@ -1056,20 +1206,28 @@ async function generateHomieAttackViaAI() {
 function renderAbilities() {
   if (!abilityList) return;
   abilityList.innerHTML = "";
-  const filter = (abilityFilterInput.value || "").toLowerCase().trim();
+  const filter = (abilityFilterInput.value || "")
+    .toLowerCase()
+    .trim();
+  const abilitiesArray = Array.isArray(state.abilities)
+    ? state.abilities
+    : [];
 
-  const abilities = state.abilities.filter((a) => {
+  const abilities = abilitiesArray.filter((a) => {
     if (!filter) return true;
-    const matchIn =
+    return (
       (a.name && a.name.toLowerCase().includes(filter)) ||
-      (a.assignTo && a.assignTo.toLowerCase().includes(filter)) ||
-      (a.mechanicalEffect && a.mechanicalEffect.toLowerCase().includes(filter));
-    return matchIn;
+      (a.assignTo &&
+        a.assignTo.toLowerCase().includes(filter)) ||
+      (a.mechanicalEffect &&
+        a.mechanicalEffect.toLowerCase().includes(filter))
+    );
   });
 
   if (!abilities.length) {
     abilityList.classList.add("empty-message");
-    abilityList.innerHTML = "<p>No abilities match that filter yet.</p>";
+    abilityList.innerHTML =
+      "<p>No abilities match that filter yet.</p>";
     return;
   }
   abilityList.classList.remove("empty-message");
@@ -1114,7 +1272,9 @@ function renderAbilities() {
     const metaLine = document.createElement("div");
     metaLine.innerHTML = `<strong>${a.actionType || "Action"}</strong> • Range ${
       a.range || "—"
-    } • Target ${a.target || "—"} • Save ${a.saveDC || "—"} • Damage ${a.damage || "—"}`;
+    } • Target ${a.target || "—"} • Save ${a.saveDC || "—"} • Damage ${
+      a.damage || "—"
+    }`;
     section.appendChild(metaLine);
 
     const effectLine = document.createElement("div");
@@ -1162,7 +1322,9 @@ function renderAbilities() {
     copyBtn.addEventListener("click", async () => {
       const text = `${a.name}
 Assigned To: ${a.assignTo}
-Action: ${a.actionType || "Action"} | Range: ${a.range || "—"} | Target: ${a.target || "—"}
+Action: ${a.actionType || "Action"} | Range: ${a.range || "—"} | Target: ${
+        a.target || "—"
+      }
 Save/DC: ${a.saveDC || "—"} | Damage: ${a.damage || "—"}
 Effect Types: ${(a.effectTypes || []).join(", ") || "—"}
 
@@ -1205,15 +1367,18 @@ ${a.comboNotes || ""}`;
 
 // ============== Panel 5: Summary Dashboard ==============
 
-const summaryList = document.getElementById("summary-list");
-
 function renderSummary() {
   if (!summaryList) return;
   summaryList.innerHTML = "";
 
   const entries = [];
+  const homiesArray = Array.isArray(state.homies) ? state.homies : [];
+  const domainsArray = Array.isArray(state.domains) ? state.domains : [];
+  const abilitiesArray = Array.isArray(state.abilities)
+    ? state.abilities
+    : [];
 
-  state.homies.forEach((h) => {
+  homiesArray.forEach((h) => {
     entries.push({
       id: h.id,
       kind: "Homie",
@@ -1228,7 +1393,7 @@ function renderSummary() {
     });
   });
 
-  state.domains.forEach((d) => {
+  domainsArray.forEach((d) => {
     entries.push({
       id: d.id,
       kind: "Domain",
@@ -1299,16 +1464,21 @@ function renderSummary() {
       `;
     } else {
       statsLine.innerHTML = `
-        <span><strong>Tier / Fear:</strong> ${e.extra || "—"}</span>
-        <span><strong>Control Radius:</strong> ${e.move || "—"}</span>
+        <span><strong>Tier / Fear:</strong> ${
+          e.extra || "—"
+        }</span>
+        <span><strong>Control Radius:</strong> ${
+          e.move || "—"
+        }</span>
       `;
     }
 
     const abilitySummary = document.createElement("div");
     abilitySummary.className = "summary-line";
-    const relatedAbilities = state.abilities.filter((a) => {
+    const relatedAbilities = abilitiesArray.filter((a) => {
       if (e.kind === "Homie") return a.assignTo === e.name;
-      if (e.kind === "Domain") return a.assignTo === `Domain: ${e.name}`;
+      if (e.kind === "Domain")
+        return a.assignTo === `Domain: ${e.name}`;
       return false;
     });
     const names = relatedAbilities.map((a) => a.name);
@@ -1361,11 +1531,15 @@ async function callSoulAI(payload) {
     try {
       data = JSON.parse(text);
     } catch (parseErr) {
-      throw new Error("Failed to parse AI response JSON: " + parseErr.message);
+      throw new Error(
+        "Failed to parse AI response JSON: " + parseErr.message
+      );
     }
 
     if (!data || !data.success) {
-      throw new Error(data && data.error ? data.error : "Unknown AI error.");
+      throw new Error(
+        data && data.error ? data.error : "Unknown AI error."
+      );
     }
     return data;
   } catch (err) {
@@ -1380,7 +1554,8 @@ function setupGlobalButtons() {
   const saveBtn = document.getElementById("btn-save");
   const resetBtn = document.getElementById("btn-reset");
   const printBtn = document.getElementById("btn-print");
-  const refreshSummaryBtn = document.getElementById("btn-refresh-summary");
+  const refreshSummaryBtn =
+    document.getElementById("btn-refresh-summary");
 
   saveBtn?.addEventListener("click", () => {
     saveState();
@@ -1405,22 +1580,32 @@ function setupGlobalButtons() {
 // ============== Event wiring ==============
 
 function setupEventHandlers() {
-  document.getElementById("btn-recalc-soul")?.addEventListener("click", calculateSoulFromInputs);
-  document.getElementById("btn-add-soul")?.addEventListener("click", addSoulToBank);
+  document
+    .getElementById("btn-recalc-soul")
+    ?.addEventListener("click", calculateSoulFromInputs);
+  document
+    .getElementById("btn-add-soul")
+    ?.addEventListener("click", addSoulToBank);
   soulFilterInput?.addEventListener("input", renderSoulBank);
 
-  document.getElementById("btn-create-homie")?.addEventListener("click", createHomieFromForm);
+  document
+    .getElementById("btn-create-homie")
+    ?.addEventListener("click", createHomieFromForm);
   homieFilterInput?.addEventListener("input", renderHomies);
   document
     .getElementById("btn-generate-homie-attack")
     ?.addEventListener("click", generateHomieAttackViaAI);
 
-  document.getElementById("btn-create-domain")?.addEventListener("click", createDomainFromForm);
+  document
+    .getElementById("btn-create-domain")
+    ?.addEventListener("click", createDomainFromForm);
   domainFilterInput?.addEventListener("input", renderDomains);
 
   document
     .getElementById("btn-create-ability-manual")
-    ?.addEventListener("click", () => createAbilityFromForm("Manual"));
+    ?.addEventListener("click", () =>
+      createAbilityFromForm("Manual")
+    );
   document
     .getElementById("btn-create-ability-ai")
     ?.addEventListener("click", createAbilityViaAI);
@@ -1431,6 +1616,39 @@ function setupEventHandlers() {
 
 function init() {
   try {
+    // Assign DOM refs now that DOM is fully loaded
+    creatureNameInput = document.getElementById("creature-name");
+    rawMightInput = document.getElementById("raw-might");
+    proficiencyTierSelect =
+      document.getElementById("proficiency-tier");
+    willpowerInput = document.getElementById("willpower-level");
+    combinedSoulRatingSpan =
+      document.getElementById("combined-soul-rating");
+    soulLevelSpan = document.getElementById("soul-level");
+    soulEnergySpan = document.getElementById("soul-energy");
+    soulMaxHpLostSpan = document.getElementById("soul-max-hp-lost");
+    soulTraitsInput = document.getElementById("soul-traits");
+    soulNotesInput = document.getElementById("soul-notes");
+    soulFilterInput = document.getElementById("soul-filter-input");
+    soulBankList = document.getElementById("soul-bank-list");
+
+    homieLinkedSoulSelect =
+      document.getElementById("homie-linked-soul");
+    homieAssignedDomainSelect =
+      document.getElementById("homie-assigned-domain");
+    homieRosterList = document.getElementById("homie-roster-list");
+    homieFilterInput = document.getElementById("homie-filter-input");
+
+    domainList = document.getElementById("domain-list");
+    domainFilterInput =
+      document.getElementById("domain-filter-input");
+
+    abilityList = document.getElementById("ability-list");
+    abilityFilterInput =
+      document.getElementById("ability-filter-input");
+
+    summaryList = document.getElementById("summary-list");
+
     loadState();
     setupPanelToggles();
     setupAutoResize();
