@@ -2,625 +2,454 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Soul-Soul Fruit Workshop</title>
+  <title>Soul-Soul Fruit Control Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Global error banner -->
   <div id="app-error-banner" class="error-banner hidden">
     <span id="app-error-text"></span>
     <button id="app-error-close" type="button">✕</button>
   </div>
 
-  <header class="app-header">
-    <div class="app-title">
-      <h1>Soul-Soul Fruit Control Panel</h1>
-      <p>Big Mom–style soul harvesting, homie crafting, domains, and ability forging.</p>
-    </div>
-    <div class="app-controls">
-      <div class="spu-totals">
+  <header class="top-header">
+    <h1>Soul-Soul Fruit Control Panel</h1>
+    <p>Big Mom–style soul harvesting • Homies • Domains • Abilities • Combat Dashboard</p>
+
+    <div class="header-right">
+      <div class="spu-readout">
         <span>Total SPU: <strong id="total-spu">0</strong></span>
         <span>SPU Spent: <strong id="spent-spu">0</strong></span>
-        <span>SPU Available: <strong id="available-spu">0</strong></span>
+        <span>Available: <strong id="available-spu">0</strong></span>
       </div>
       <div class="header-buttons">
-        <button id="btn-save" type="button" class="btn secondary">Save Now</button>
-        <button id="btn-reset" type="button" class="btn danger">Reset</button>
-        <button id="btn-print" type="button" class="btn primary">Print Reference</button>
+        <button id="btn-save" class="btn secondary">Save</button>
+        <button id="btn-reset" class="btn danger">Reset</button>
+        <button id="btn-print" class="btn primary">Print</button>
       </div>
     </div>
   </header>
 
-  <!-- NEW: centered section navigation bar -->
-  <nav class="section-nav">
-    <button class="section-nav-btn" data-target="panel-souls">Souls</button>
-    <button class="section-nav-btn" data-target="panel-homies">Homies</button>
-    <button class="section-nav-btn" data-target="panel-abilities">Abilities</button>
-    <button class="section-nav-btn" data-target="panel-domains">Domains</button>
-    <button class="section-nav-btn" data-target="panel-playable">Playable View</button>
-  </nav>
+  <div class="app-shell">
+    <!-- LEFT: TABS -->
+    <nav class="side-nav">
+      <button class="nav-item active" data-tab="souls">Souls</button>
+      <button class="nav-item" data-tab="homies">Homies</button>
+      <button class="nav-item" data-tab="abilities">Abilities</button>
+      <button class="nav-item" data-tab="domains">Domains</button>
+      <button class="nav-item" data-tab="playable">Playable View</button>
+    </nav>
 
-  <main class="app-main">
-    <!-- PANEL 1: Soul Rating & Soul Bank -->
-    <section id="panel-souls" class="panel">
-      <div class="panel-header">
-        <h2>Panel 1 – Soul Rating & Soul Bank</h2>
-        <button class="panel-toggle" type="button" aria-label="Toggle panel">▴</button>
-      </div>
-      <div class="panel-body panel-columns">
-        <!-- Left: Soul rating helper -->
-        <div class="card">
-          <h3>Core Soul Rating (No Math Brain Required)</h3>
-          <p class="muted">
-            Input three things about the target to get a scaled Soul Energy result. This captures physical might, combat proficiency, and sheer Willpower.
-          </p>
+    <!-- RIGHT: PANELS -->
+    <main class="main-panel">
+      <!-- TAB: SOULS -->
+      <section id="tab-souls" class="tab-section active">
+        <h2 class="panel-title">Panel 1 — Soul Rating & Soul Bank</h2>
 
-          <div class="field-group">
-            <label for="creature-name">Creature Name</label>
-            <input id="creature-name" type="text" placeholder="Kaido" />
-          </div>
+        <div class="panel-grid">
+          <!-- Left: calculator -->
+          <div class="card">
+            <h3>Core Soul Rating</h3>
+            <p class="muted">
+              Fill these in to get a suggested Soul Level and Soul Energy. This is the “soul budget” you can spend on Homies and Domains.
+            </p>
 
-          <div class="field-columns">
             <div class="field-group">
-              <label for="raw-might">Raw Might (1–10)</label>
-              <input id="raw-might" type="number" min="1" max="10" />
-              <p class="help-text">How physically / combat capable they are at baseline.</p>
+              <label for="creature-name">Creature Name</label>
+              <input id="creature-name" type="text" placeholder="Kaido" />
             </div>
+
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="raw-might">Raw Might (1–10)</label>
+                <input id="raw-might" type="number" min="1" max="10" />
+              </div>
+              <div class="field-group">
+                <label for="proficiency-tier">Proficiency Tier (0–9)</label>
+                <select id="proficiency-tier">
+                  <option value="0">0 – Scrub</option>
+                  <option value="1">1 – Rookie</option>
+                  <option value="2">2 – Local Threat</option>
+                  <option value="3">3 – Veteran</option>
+                  <option value="4">4 – Elite</option>
+                  <option value="5">5 – Warlord / Vice-Admiral</option>
+                  <option value="6">6 – Admiral / Top Commander</option>
+                  <option value="7">7 – Yonko</option>
+                  <option value="8">8 – Pirate King Tier</option>
+                  <option value="9">9 – Mythic / Broken</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="willpower-level">Willpower (1–10)</label>
+                <input id="willpower-level" type="number" min="1" max="10" />
+              </div>
+            </div>
+
+            <div class="result-row">
+              <div>
+                <span class="result-label">Combined Rating</span>
+                <span class="result-value" id="combined-soul-rating">0</span>
+              </div>
+              <div>
+                <span class="result-label">Level (SoL)</span>
+                <span class="result-value" id="soul-level">0</span>
+              </div>
+              <div>
+                <span class="result-label">Soul Energy (SPU)</span>
+                <span class="result-value" id="soul-energy">0</span>
+              </div>
+              <div>
+                <span class="result-label">Suggested Max HP Lost</span>
+                <span class="result-value" id="soul-max-hp-lost">0</span>
+              </div>
+            </div>
+
             <div class="field-group">
-              <label for="proficiency-tier">Proficiency Tier (0–9)</label>
-              <select id="proficiency-tier">
-                <option value="0">0 – Scrub</option>
-                <option value="1">1 – Rookie</option>
-                <option value="2">2 – Local Threat</option>
-                <option value="3">3 – Veteran</option>
-                <option value="4">4 – Elite</option>
-                <option value="5">5 – Warlord / Vice-Admiral</option>
-                <option value="6">6 – Admiral / Top Commander</option>
-                <option value="7">7 – Yonko</option>
-                <option value="8">8 – Pirate King Tier</option>
-                <option value="9">9 – Mythic / Broken</option>
-              </select>
-              <p class="help-text">Their “skill tier” in the world. Heavily influences the soul rating.</p>
+              <label for="soul-traits">Traits / Tags</label>
+              <input id="soul-traits" type="text" placeholder="stubborn, marine, beastly…" />
             </div>
+
             <div class="field-group">
-              <label for="willpower-level">Willpower Level (1–10)</label>
-              <input id="willpower-level" type="number" min="1" max="10" />
-              <p class="help-text">How unbreakable their spirit is. This is the most important factor.</p>
+              <label for="soul-notes">Soul Notes</label>
+              <textarea id="soul-notes" rows="3" placeholder="Backstory, how you broke their will, personality, etc."></textarea>
+            </div>
+
+            <div class="button-row">
+              <button id="btn-recalc-soul" class="btn secondary">Recalculate</button>
+              <button id="btn-add-soul" class="btn primary">Add to Soul Bank</button>
             </div>
           </div>
 
-          <div class="field-group results-grid">
-            <div>
-              <span class="result-label">Combined Rating</span>
-              <span class="result-value" id="combined-soul-rating">0</span>
+          <!-- Right: bank -->
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Soul Bank</h3>
+              <input id="soul-filter" class="search-input" type="text" placeholder="Search souls…" />
             </div>
-            <div>
-              <span class="result-label">Level (SoL)</span>
-              <span class="result-value" id="soul-level">0</span>
-            </div>
-            <div>
-              <span class="result-label">Soul Energy (SPU)</span>
-              <span class="result-value" id="soul-energy">0</span>
-            </div>
-            <div>
-              <span class="result-label">Suggested Max HP Lost</span>
-              <span class="result-value" id="soul-max-hp-lost">0</span>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="soul-traits">Traits / Tags (optional)</label>
-            <input id="soul-traits" type="text" placeholder="Ex: cowardly, marine, zealot" />
-          </div>
-
-          <div class="field-group">
-            <label for="soul-notes">Soul Notes</label>
-            <textarea
-              id="soul-notes"
-              rows="3"
-              placeholder="Flavor, backstory, what broke their will, how they reacted…"
-            ></textarea>
-          </div>
-
-          <div class="button-row">
-            <button id="btn-recalc-soul" type="button" class="btn secondary">Recalculate Soul Rating</button>
-            <button id="btn-add-soul" type="button" class="btn primary">Add Soul to Bank</button>
+            <p class="muted">
+              All harvested souls with their Level and SPU. Use the toggles to mark if they’re available to spend or Soul-Rip immune for the day.
+            </p>
+            <div id="soul-bank-list" class="stack-list"></div>
           </div>
         </div>
+      </section>
 
-        <!-- Right: Soul bank -->
-        <div class="card">
-          <div class="card-header-row">
-            <h3>Soul Bank</h3>
-            <input
-              id="soul-filter"
-              type="text"
-              class="filter-input"
-              placeholder="Filter by name / trait"
-            />
+      <!-- TAB: HOMIES -->
+      <section id="tab-homies" class="tab-section">
+        <h2 class="panel-title">Panel 2 — Homies (Creation & Upgrades)</h2>
+
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Create a Homie</h3>
+            <p class="muted">Spend SPU once to bring a Homie into existence, then upgrade it later with more SPU.</p>
+
+            <div class="field-row two">
+              <div class="field-group">
+                <label for="homie-name">Homie Name</label>
+                <input id="homie-name" type="text" placeholder="Panther" />
+              </div>
+              <div class="field-group">
+                <label for="homie-type">Homie Type</label>
+                <select id="homie-type">
+                  <option value="Signature">Signature Homie</option>
+                  <option value="Minor">Minor Homie</option>
+                  <option value="Territory">Territory Homie</option>
+                  <option value="Buff">Buff / Support Homie</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="homie-linked-soul">Linked Soul (optional)</label>
+              <select id="homie-linked-soul"></select>
+            </div>
+
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="homie-spu">Initial SPU Investment</label>
+                <input id="homie-spu" type="number" min="0" step="10" />
+              </div>
+              <div class="field-group">
+                <label for="homie-role">Role / Concept</label>
+                <input id="homie-role" type="text" placeholder="support, artillery, bruiser…" />
+              </div>
+            </div>
+
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="homie-hp">HP</label>
+                <input id="homie-hp" type="number" min="1" />
+              </div>
+              <div class="field-group">
+                <label for="homie-ac">AC</label>
+                <input id="homie-ac" type="number" min="0" />
+              </div>
+              <div class="field-group">
+                <label for="homie-move">Movement</label>
+                <input id="homie-move" type="number" min="0" />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="homie-attack">Primary Damage / Attack</label>
+              <input id="homie-attack" type="text" placeholder="4d12 slashing, 60 ft gunfire, etc." />
+            </div>
+
+            <div class="field-group">
+              <label for="homie-personality">Personality Traits</label>
+              <input id="homie-personality" type="text" placeholder="arrogant, gluttonous, storm-obsessed…" />
+            </div>
+
+            <div class="field-group">
+              <label for="homie-location">Bound Location (Territory Homies)</label>
+              <input id="homie-location" type="text" placeholder="Southern Gate of Montblank City" />
+            </div>
+
+            <div class="field-group">
+              <label for="homie-domain">Assigned Domain</label>
+              <select id="homie-domain"></select>
+            </div>
+
+            <button id="btn-create-homie" class="btn primary full">Create Homie</button>
           </div>
-          <p class="muted">
-            All harvested souls are stored here with their Soul Level and Soul Energy. Toggle crafting availability or mark a target as Soul-Rip Immune for the day.
-          </p>
 
-          <div id="soul-bank-list" class="card-list">
-            <!-- souls rendered via JS -->
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Homie Roster & Upgrades</h3>
+              <input id="homie-filter" class="search-input" type="text" placeholder="Search homies…" />
+            </div>
+            <p class="muted">
+              Quick glance at HP, AC, movement, SPU, role, and linked soul. You can later extend this with upgrade buttons.
+            </p>
+            <div id="homie-roster" class="stack-list"></div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- PANEL 2: Homies -->
-    <section id="panel-homies" class="panel">
-      <div class="panel-header">
-        <h2>Panel 2 – Homies (Creation & Upgrades)</h2>
-        <button class="panel-toggle" type="button" aria-label="Toggle panel">▴</button>
-      </div>
-      <div class="panel-body panel-columns">
-        <!-- Left: Create homie -->
-        <div class="card">
-          <h3>Create a Homie</h3>
-          <p class="muted">
-            Spend Soul Energy (SPU) once to create Minor, Territory, Buff, or Signature Homies.
-          </p>
+      <!-- TAB: ABILITIES -->
+      <section id="tab-abilities" class="tab-section">
+        <h2 class="panel-title">Panel 3 — Ability Cards (Manual & AI)</h2>
 
-          <div class="field-columns">
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Create / Forge Ability</h3>
+            <p class="muted">
+              Either write abilities yourself or let the AI forge them from your notes, effect types, and power level. Abilities can be tied to a Homie, a Domain, or kept as General.
+            </p>
+
             <div class="field-group">
-              <label for="homie-name">Homie Name</label>
-              <input id="homie-name" type="text" placeholder="Panther" />
+              <label for="ability-name">Ability Name</label>
+              <input id="ability-name" type="text" placeholder="Soul-Stealing Vines" />
             </div>
+
             <div class="field-group">
-              <label for="homie-type">Homie Type</label>
-              <select id="homie-type">
-                <option value="Signature">Signature Homie (elite companions)</option>
-                <option value="Minor">Minor Homie</option>
-                <option value="Territory">Territory Homie</option>
-                <option value="Buff">Buff / Support Homie</option>
-              </select>
+              <label for="ability-assigned-to">Assign To</label>
+              <select id="ability-assigned-to"></select>
             </div>
-          </div>
 
-          <div class="field-group">
-            <label for="homie-linked-soul">Linked Soul (optional)</label>
-            <select id="homie-linked-soul"></select>
-            <p class="help-text">For personality or mechanical flavor links. Purely reference.</p>
-          </div>
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="ability-action">Action Type</label>
+                <input id="ability-action" type="text" placeholder="Action / Bonus Action / Reaction" />
+              </div>
+              <div class="field-group">
+                <label for="ability-range">Range</label>
+                <input id="ability-range" type="text" placeholder="30 ft, 60 ft cone, self…" />
+              </div>
+              <div class="field-group">
+                <label for="ability-target">Target</label>
+                <input id="ability-target" type="text" placeholder="one creature, enemies in area…" />
+              </div>
+            </div>
 
-          <div class="field-columns">
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="ability-dc">Save / DC</label>
+                <input id="ability-dc" type="text" placeholder="Str save DC 19, Wis save vs 18…" />
+              </div>
+              <div class="field-group">
+                <label for="ability-damage">Damage Dice</label>
+                <input id="ability-damage" type="text" placeholder="6d10 necrotic + 4d8 thunder" />
+              </div>
+              <div class="field-group">
+                <label for="ability-power">Power Level (1–10)</label>
+                <input id="ability-power" type="number" min="1" max="10" value="7" />
+              </div>
+            </div>
+
+            <div class="field-row two">
+              <div class="field-group">
+                <label for="ability-soul-cost">Soul Energy Used (optional)</label>
+                <input id="ability-soul-cost" type="number" min="0" step="10" value="0" />
+              </div>
+              <div class="field-group">
+                <label>Effect Types</label>
+                <div class="checkbox-row">
+                  <label><input type="checkbox" class="ability-type" value="Offense" /> Offense</label>
+                  <label><input type="checkbox" class="ability-type" value="Defense" /> Defense</label>
+                  <label><input type="checkbox" class="ability-type" value="Support" /> Support</label>
+                  <label><input type="checkbox" class="ability-type" value="Control" /> Control</label>
+                  <label><input type="checkbox" class="ability-type" value="Utility" /> Utility</label>
+                  <label><input type="checkbox" class="ability-type" value="Reality-Bending" /> Reality-Bending</label>
+                </div>
+              </div>
+            </div>
+
             <div class="field-group">
-              <label for="homie-spu">Initial SPU Investment</label>
-              <input id="homie-spu" type="number" min="0" step="10" />
-              <p class="help-text">SPU you dedicate to bring the Homie into existence. More SPU = sturdier or more powerful.</p>
+              <label for="ability-effect-notes">Effect Notes / Flavor</label>
+              <textarea id="ability-effect-notes" rows="2" placeholder="Short cinematic summary of what this looks like."></textarea>
             </div>
+
             <div class="field-group">
-              <label for="homie-role">Role / Concept</label>
-              <input id="homie-role" type="text" placeholder="Support, frontline bruiser, artillery, healer..." />
+              <label for="ability-mechanical">Mechanical Effect (on hit / failed save)</label>
+              <textarea id="ability-mechanical" rows="3" placeholder="Conditions, extra damage over time, battlefield changes, etc."></textarea>
             </div>
-          </div>
 
-          <div class="field-columns">
             <div class="field-group">
-              <label for="homie-hp">HP (for combat / Signature Homies)</label>
-              <input id="homie-hp" type="number" min="1" />
+              <label for="ability-combo">Combo / Interaction Notes</label>
+              <textarea id="ability-combo" rows="2" placeholder="How this interacts with Homies, Domains, or other abilities."></textarea>
             </div>
-            <div class="field-group">
-              <label for="homie-ac">AC</label>
-              <input id="homie-ac" type="number" min="0" />
-            </div>
-            <div class="field-group">
-              <label for="homie-move">Movement</label>
-              <input id="homie-move" type="number" min="0" />
+
+            <div class="button-row">
+              <button id="btn-create-ability-manual" class="btn secondary">Create Manually</button>
+              <button id="btn-create-ability-ai" class="btn primary">Generate via AI</button>
             </div>
           </div>
 
-          <div class="field-group">
-            <label for="homie-attack">Primary Damage / Attack</label>
-            <input id="homie-attack" type="text" placeholder="1d12 slashing, 2d10 fire, etc." />
-          </div>
-
-          <div class="field-group">
-            <label for="homie-personality">Personality Traits (from souls used)</label>
-            <input
-              id="homie-personality"
-              type="text"
-              placeholder="Ex: arrogant, gluttonous, storm-obsessed, jealous, loyal."
-            />
-          </div>
-
-          <div class="field-group">
-            <label for="homie-location">Bound Location (Territory Homies)</label>
-            <input id="homie-location" type="text" placeholder="Ex: Southern Gate of Montblank City" />
-          </div>
-
-          <div class="field-group">
-            <label for="homie-domain">Assigned Domain</label>
-            <select id="homie-domain"></select>
-          </div>
-
-          <button id="btn-create-homie" type="button" class="btn primary full-width">
-            Create Homie
-          </button>
-        </div>
-
-        <!-- Right: roster summary (non-AI now, just list) -->
-        <div class="card">
-          <div class="card-header-row">
-            <h3>Homie Roster & Upgrades</h3>
-            <input
-              id="homie-filter"
-              type="text"
-              class="filter-input"
-              placeholder="Filter homies..."
-            />
-          </div>
-          <p class="muted">
-            Upgrade HP, AC, Damage, and Utility tiers by spending SPU. When a Homie is destroyed, pay half of its SPU invested to revive it.
-          </p>
-          <div id="homie-roster" class="card-list">
-            <!-- Homies rendered via JS -->
+          <div class="card">
+            <div class="card-header-row">
+              <h3>All Abilities</h3>
+              <input id="ability-filter" class="search-input" type="text" placeholder="Search abilities…" />
+            </div>
+            <p class="muted">
+              AI and manual abilities. Each card is formatted like your Soul-Stealing Vines example for fast reading and printing.
+            </p>
+            <div id="ability-list" class="stack-list"></div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- PANEL 3: Ability Cards (Manual & AI) -->
-    <section id="panel-abilities" class="panel">
-      <div class="panel-header">
-        <h2>Panel 3 – Ability Cards (Manual & AI)</h2>
-        <button class="panel-toggle" type="button" aria-label="Toggle panel">▴</button>
-      </div>
-      <div class="panel-body panel-columns">
-        <!-- Left: Create / Forge Ability -->
-        <div class="card">
-          <h3>Create / Forge Ability</h3>
-          <p class="muted">
-            Either create abilities manually or let souls forge them based on effect types, desired outcomes, power level, and an optional soul cost.
-          </p>
+      <!-- TAB: DOMAINS -->
+      <section id="tab-domains" class="tab-section">
+        <h2 class="panel-title">Panel 4 — Domains & Lair Actions</h2>
 
-          <div class="field-group">
-            <label for="ability-name">Ability Name</label>
-            <input id="ability-name" type="text" placeholder="Ex: Soul-Storm Judgment" />
-          </div>
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Create a Domain</h3>
+            <p class="muted">
+              Build Big Mom-style territories. Set tier, SPU, fear DC, and link Territory Homies.
+            </p>
 
-          <div class="field-group">
-            <label for="ability-assigned-to">Assign To</label>
-            <select id="ability-assigned-to">
-              <!-- populated from JS: General / Homies / Domains -->
-            </select>
-          </div>
-
-          <div class="field-columns">
             <div class="field-group">
-              <label for="ability-action">Action Type</label>
-              <input
-                id="ability-action"
-                type="text"
-                placeholder="Ex: Action, Bonus Action, Reaction"
-              />
+              <label for="domain-name">Domain Name</label>
+              <input id="domain-name" type="text" placeholder="Wano" />
             </div>
+
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="domain-tier">Domain Tier (1–10)</label>
+                <input id="domain-tier" type="number" min="1" max="10" />
+              </div>
+              <div class="field-group">
+                <label for="domain-spu">SPU Invested</label>
+                <input id="domain-spu" type="number" min="0" step="10" />
+              </div>
+              <div class="field-group">
+                <label for="domain-dc">Passive Fear DC</label>
+                <input id="domain-dc" type="number" min="0" />
+              </div>
+            </div>
+
+            <div class="field-row two">
+              <div class="field-group">
+                <label for="domain-range">Control Radius</label>
+                <input id="domain-range" type="text" placeholder="100 miles, whole island, castle grounds…" />
+              </div>
+              <div class="field-group">
+                <label for="domain-homies">Assigned Territory Homies</label>
+                <select id="domain-homies" multiple></select>
+              </div>
+            </div>
+
             <div class="field-group">
-              <label for="ability-range">Range</label>
-              <input
-                id="ability-range"
-                type="text"
-                placeholder="Ex: Self, 30 ft., 60 ft. cone"
-              />
+              <label for="domain-personality">Environment Personality</label>
+              <textarea id="domain-personality" rows="3" placeholder="Lush jungle surrounding a giant Wano-style city…"></textarea>
             </div>
+
             <div class="field-group">
-              <label for="ability-target">Target</label>
-              <input
-                id="ability-target"
-                type="text"
-                placeholder="Ex: Single creature, 3 creatures you can see"
-              />
+              <label for="domain-lairs">Manual Lair Notes (optional)</label>
+              <textarea id="domain-lairs" rows="3" placeholder="You can jot down lair ideas here alongside the AI cards."></textarea>
             </div>
-          </div>
 
-          <div class="field-columns">
             <div class="field-group">
-              <label for="ability-dc">Save / DC</label>
-              <input
-                id="ability-dc"
-                type="text"
-                placeholder="Ex: Wis save vs. DC 18, no save"
-              />
+              <label for="domain-notes">Domain Notes</label>
+              <textarea id="domain-notes" rows="2" placeholder="Extra politics, lore, etc."></textarea>
             </div>
-            <div class="field-group">
-              <label for="ability-damage">Damage Dice</label>
-              <input
-                id="ability-damage"
-                type="text"
-                placeholder="Ex: 6d10 necrotic + 4d8 thunder"
-              />
+
+            <button id="btn-create-domain" class="btn primary full">Create Domain</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Domains Overview</h3>
+              <input id="domain-filter" class="search-input" type="text" placeholder="Search domains…" />
             </div>
-          </div>
+            <p class="muted">
+              See tier, SPU, control radius, fear DC, and which Homies guard each Domain.
+            </p>
+            <div id="domain-list" class="stack-list"></div>
 
-          <div class="field-columns">
-            <div class="field-group">
-              <label for="ability-power">Ability Power Level (1–10)</label>
-              <input id="ability-power" type="number" min="1" max="10" />
+            <hr class="divider" />
+
+            <h3>AI Lair Action Generator</h3>
+            <p class="muted">
+              Generate lair actions as separate cards using the same layout as Abilities.
+            </p>
+
+            <div class="field-row three">
+              <div class="field-group">
+                <label for="lair-domain-select">Domain</label>
+                <select id="lair-domain-select"></select>
+              </div>
+              <div class="field-group">
+                <label for="lair-power">Power Level (1–10)</label>
+                <input id="lair-power" type="number" min="1" max="10" value="7" />
+              </div>
+              <div class="field-group">
+                <label for="lair-count">Number of Actions</label>
+                <input id="lair-count" type="number" min="1" max="5" value="3" />
+              </div>
             </div>
-            <div class="field-group">
-              <label for="ability-soul-cost">Soul Energy Used (optional)</label>
-              <input
-                id="ability-soul-cost"
-                type="number"
-                min="0"
-                step="10"
-                placeholder="0"
-              />
+
+            <div class="button-row">
+              <button id="btn-generate-lairs" class="btn primary">Generate Lair Actions</button>
+              <button id="btn-reroll-lairs" class="btn secondary">Reroll Last</button>
             </div>
-          </div>
 
-          <div class="field-group">
-            <label>Effect Types</label>
-            <div class="checkbox-group">
-              <label><input type="checkbox" class="ability-type" value="Offense" /> Offense</label>
-              <label><input type="checkbox" class="ability-type" value="Defense" /> Defense</label>
-              <label><input type="checkbox" class="ability-type" value="Support" /> Support</label>
-              <label><input type="checkbox" class="ability-type" value="Control" /> Control</label>
-              <label><input type="checkbox" class="ability-type" value="Utility" /> Utility</label>
-              <label><input type="checkbox" class="ability-type" value="Reality-Bending" /> Reality-Bending</label>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="ability-effect-notes">Effect Notes</label>
-            <textarea
-              id="ability-effect-notes"
-              rows="2"
-              placeholder="Clarify how you want damage, buffs, debuffs, or healing to behave."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label>Desired Outcome / Ability Shape</label>
-            <div class="checkbox-group">
-              <label><input type="checkbox" class="ability-outcome" value="Barrier" /> Barrier / Shield</label>
-              <label><input type="checkbox" class="ability-outcome" value="Restrain" /> Restrain / Bind</label>
-              <label><input type="checkbox" class="ability-outcome" value="Zone" /> Area Denial / Zone</label>
-              <label><input type="checkbox" class="ability-outcome" value="Morph" /> Morphing / Weapon Form</label>
-              <label><input type="checkbox" class="ability-outcome" value="Overcharge" /> Overcharge / Self-Buff</label>
-              <label><input type="checkbox" class="ability-outcome" value="Mobility" /> Mobility / Gap Closer</label>
-              <label><input type="checkbox" class="ability-outcome" value="Debuff" /> Debuff / Weakening</label>
-              <label><input type="checkbox" class="ability-outcome" value="Burst" /> Explosion / Burst</label>
-              <label><input type="checkbox" class="ability-outcome" value="HighDamage" /> High Damage / Burst Focus</label>
-              <label><input type="checkbox" class="ability-outcome" value="BattlefieldControl" /> Battlefield Control</label>
-              <label><input type="checkbox" class="ability-outcome" value="Finisher" /> Signature Finisher</label>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="ability-outcome-notes">Outcome / Effect Notes</label>
-            <textarea
-              id="ability-outcome-notes"
-              rows="2"
-              placeholder="Describe what you want the move to look like in the scene and the exact outcome."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="ability-mechanical">Mechanical Effect</label>
-            <textarea
-              id="ability-mechanical"
-              rows="3"
-              placeholder="What happens on hit / failed save, conditions, battlefield changes, etc."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="ability-combo">Combo / Interaction Notes</label>
-            <textarea
-              id="ability-combo"
-              rows="2"
-              placeholder="How this interacts with Homies, Domains, or other abilities."
-            ></textarea>
-          </div>
-
-          <div class="button-row">
-            <button
-              id="btn-create-ability-manual"
-              type="button"
-              class="btn secondary"
-            >
-              Create Ability Manually
-            </button>
-            <button
-              id="btn-create-ability-ai"
-              type="button"
-              class="btn primary"
-            >
-              Generate via AI
-            </button>
+            <div id="lair-action-cards" class="stack-list"></div>
           </div>
         </div>
+      </section>
 
-        <!-- Right: Ability list -->
-        <div class="card">
-          <div class="card-header-row">
-            <h3>Ability List</h3>
-            <input
-              id="ability-filter"
-              type="text"
-              class="filter-input"
-              placeholder="Search abilities..."
-            />
-          </div>
-          <p class="muted">
-            Browse all abilities – manual and AI-generated. Use the copy button on each card to paste into your character sheet.
-          </p>
-
-          <div id="ability-list" class="card-list">
-            <!-- abilities rendered via JS -->
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PANEL 4: Domains & Lair Actions -->
-    <section id="panel-domains" class="panel">
-      <div class="panel-header">
-        <h2>Panel 4 – Domains & Lair Actions</h2>
-        <button class="panel-toggle" type="button" aria-label="Toggle panel">▴</button>
-      </div>
-      <div class="panel-body panel-columns">
-        <!-- Left: Create Domain -->
-        <div class="card">
-          <h3>Create a Domain</h3>
-          <p class="muted">
-            Build Big Mom–style territories. Invest SPU, set a passive Fear DC, and bind Territory Homies to shape the land.
-          </p>
-
-          <div class="field-group">
-            <label for="domain-name">Domain Name</label>
-            <input id="domain-name" type="text" placeholder="Wano" />
-          </div>
-
-          <div class="field-columns">
-            <div class="field-group">
-              <label for="domain-tier">Domain Tier (1–10)</label>
-              <input id="domain-tier" type="number" min="1" max="10" />
-            </div>
-            <div class="field-group">
-              <label for="domain-spu">SPU Invested into Domain</label>
-              <input id="domain-spu" type="number" min="0" step="10" />
-            </div>
-            <div class="field-group">
-              <label for="domain-dc">Passive Fear DC (entering enemies)</label>
-              <input id="domain-dc" type="number" min="0" />
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label for="domain-range">Territory Size / Range</label>
-            <input id="domain-range" type="text" placeholder="Ex: 100 miles" />
-          </div>
-
-          <div class="field-group">
-            <label for="domain-personality">Environmental Personality</label>
-            <textarea
-              id="domain-personality"
-              rows="3"
-              placeholder="Heavily wooded land covered in living trees and foliage. The land consumes, confuses, and traps intruders."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="domain-lairs">Lair Actions (manual or AI-written)</label>
-            <textarea
-              id="domain-lairs"
-              rows="3"
-              placeholder="You can write your own or generate with AI per domain card."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="domain-notes">Domain Notes</label>
-            <textarea
-              id="domain-notes"
-              rows="2"
-              placeholder="Extra flavor, politics, who rules here, etc."
-            ></textarea>
-          </div>
-
-          <div class="field-group">
-            <label for="domain-homies">Assign Territory Homies</label>
-            <select id="domain-homies" multiple></select>
-            <p class="help-text">Hold Ctrl/Cmd to select multiple Territory Homies.</p>
-          </div>
-
-          <button id="btn-create-domain" type="button" class="btn primary full-width">
-            Create Domain
-          </button>
-        </div>
-
-        <!-- Right: Domains + AI Lair Action Generator -->
-        <div class="card">
-          <div class="card-header-row">
-            <h3>Domains Overview</h3>
-            <input
-              id="domain-filter"
-              type="text"
-              class="filter-input"
-              placeholder="Search domains..."
-            />
-          </div>
-          <p class="muted">
-            Manage your Domains: see their fear pressure, control radius, and which Territory Homies guard them.
-          </p>
-
-          <div id="domain-list" class="card-list">
-            <!-- domains rendered via JS -->
-          </div>
-
-          <hr class="card-separator" />
-
-          <h3>AI Lair Action Generator</h3>
-          <p class="muted">
-            Pick a domain, set power, choose how many lair actions to forge, and let the AI build them in separate cards.
-          </p>
-
-          <div class="field-columns">
-            <div class="field-group">
-              <label for="lair-domain-select">Domain</label>
-              <select id="lair-domain-select"></select>
-            </div>
-            <div class="field-group">
-              <label for="lair-power">Power</label>
-              <input id="lair-power" type="number" min="1" max="10" value="7" />
-            </div>
-            <div class="field-group">
-              <label for="lair-count">Count</label>
-              <input id="lair-count" type="number" min="1" max="5" value="3" />
-            </div>
-          </div>
-
-          <div class="button-row">
-            <button id="btn-generate-lairs" type="button" class="btn primary">
-              Generate Lair Actions
-            </button>
-            <button id="btn-reroll-lairs" type="button" class="btn secondary">
-              Reroll Last
-            </button>
-          </div>
-
-          <div id="lair-action-cards" class="card-list">
-            <!-- lair action cards rendered via JS -->
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PANEL 5: Playable View -->
-    <section id="panel-playable" class="panel">
-      <div class="panel-header">
-        <h2>Panel 5 – Soul Party Dashboard (Playable View)</h2>
-        <button class="panel-toggle" type="button" aria-label="Toggle panel">▴</button>
-      </div>
-      <div class="panel-body">
+      <!-- TAB: PLAYABLE VIEW -->
+      <section id="tab-playable" class="tab-section">
+        <h2 class="panel-title">Panel 5 — Soul Party Dashboard (Playable View)</h2>
         <p class="muted">
-          Snapshot of your Homies, Domains, and key abilities. Use the dropdown cards during play to quickly see stats and attacks.
+          This is the in-session view. Use the dropdowns to quickly see Homie stats and abilities, plus Domains and lair actions.
         </p>
 
-        <!-- Homies block -->
         <div class="card">
           <h3>Homies</h3>
-          <div id="playable-homies" class="playable-list">
-            <!-- each homie rendered as dropdown with abilities -->
-          </div>
+          <div id="playable-homies" class="playable-list"></div>
         </div>
 
-        <!-- Domains block -->
         <div class="card">
           <h3>Domains</h3>
-          <div id="playable-domains" class="playable-list">
-            <!-- each domain rendered as dropdown with lair actions/abilities -->
-          </div>
+          <div id="playable-domains" class="playable-list"></div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
+  </div>
 
   <script src="script.js"></script>
 </body>
