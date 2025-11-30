@@ -1,431 +1,281 @@
-/* -----------------------------------------------------------
-   ROOT THEME
------------------------------------------------------------ */
+/* ---------------------------------------------------------
+   GLOBAL THEME — BIG MOM SOUL REALM AESTHETIC
+--------------------------------------------------------- */
 
 :root {
-  --bg-dark: #0f0f11;
-  --bg-panel: #1a1a1d;
-  --bg-subpanel: #222226;
+    --bg-dark: #0c0b16;
+    --bg-panel: #161529;
+    --bg-panel-light: #1d1b33;
+    --bg-card: #1f1d3b;
 
-  --text-light: #eeeeee;
-  --text-muted: #b3b3b3;
+    --accent-blue: #68b3ff;
+    --accent-blue-glow: rgba(104, 179, 255, 0.35);
 
-  --accent: #ff4e85;
-  --accent-light: #ff85ad;
+    --accent-pink: #ff5bd1;
+    --accent-pink-glow: rgba(255, 91, 209, 0.4);
 
-  --border-soft: rgba(255,255,255,0.08);
-  --border-strong: rgba(255,255,255,0.14);
+    --text-light: #f5f6ff;
+    --text-muted: #9ba0b8;
+    --text-soft: #cacedf;
 
-  --shadow-deep: 0 0 18px rgba(0,0,0,0.6);
+    --border-glow: 0 0 8px rgba(255, 91, 209, 0.25),
+                   0 0 16px rgba(104, 179, 255, 0.15);
+
+    --radius: 14px;
+    --radius-card: 12px;
+
+    --transition: 0.18s ease;
+    --fast: 0.1s ease;
 }
-
-/* -----------------------------------------------------------
-   GLOBAL
------------------------------------------------------------ */
 
 body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg-dark);
-  color: var(--text-light);
-  font-family: "Segoe UI", "Inter", sans-serif;
-  line-height: 1.5;
-  overflow-x: hidden;
+    background: radial-gradient(circle at 30% 0%, #1c1935 0%, #0b0a14 70%);
+    color: var(--text-light);
+    font-family: "Inter", "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Auto expanding textareas */
-textarea {
-  width: 100%;
-  min-height: 60px;
-  resize: none;
-  padding: 10px;
-  background: #2a2a2e;
-  border: 1px solid var(--border-soft);
-  color: var(--text-light);
-  font-size: 0.95rem;
-  border-radius: 6px;
-}
-
-input, select {
-  width: 100%;
-  padding: 8px;
-  background: #2a2a2e;
-  border: 1px solid var(--border-soft);
-  border-radius: 6px;
-  color: var(--text-light);
-  font-size: 0.95rem;
-}
-
-label {
-  margin-bottom: 4px;
-  display: block;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* -----------------------------------------------------------
-   HEADER
------------------------------------------------------------ */
-
-.app-header {
-  text-align: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #19191c, #141418);
-  border-bottom: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-deep);
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.9rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.app-header .subtitle {
-  margin-top: 6px;
-  font-size: 0.95rem;
-  color: var(--text-muted);
-}
-
-/* -----------------------------------------------------------
-   NAVIGATION
------------------------------------------------------------ */
-
-.side-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 170px;
-  background: #141416;
-  border-right: 1px solid var(--border-strong);
-  padding-top: 110px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.nav-btn {
-  background: none;
-  border: none;
-  color: var(--text-light);
-  padding: 12px;
-  font-size: 1rem;
-  text-align: left;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.nav-btn:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-.nav-btn.active {
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-}
-
-/* -----------------------------------------------------------
-   MAIN CONTENT
------------------------------------------------------------ */
+/* ---------------------------------------------------------
+   CENTER ALL PANELS
+--------------------------------------------------------- */
 
 .container {
-  margin-left: 180px;
-  padding: 20px;
-  max-width: 1100px;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 20px;
 }
 
-/* -----------------------------------------------------------
-   PANELS
------------------------------------------------------------ */
+/* ---------------------------------------------------------
+   PANEL LAYOUT
+--------------------------------------------------------- */
 
 .panel {
-  display: none;
-  margin-bottom: 40px;
+    background: var(--bg-panel);
+    margin: 32px auto;
+    padding: 24px 30px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: var(--border-glow);
+    position: relative;
 }
 
-.panel.active {
-  display: block;
-  animation: fadeIn 0.25s;
+.panel h2, .panel-title {
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--accent-blue);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.panel h2 {
-  font-size: 1.6rem;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border-soft);
-  padding-bottom: 6px;
-}
-
-/* -----------------------------------------------------------
+/* ---------------------------------------------------------
    SUBPANELS
------------------------------------------------------------ */
+--------------------------------------------------------- */
 
 .subpanel {
-  background: var(--bg-panel);
-  margin-bottom: 22px;
-  padding: 18px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-deep);
+    background: var(--bg-panel-light);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 0 8px rgba(0,0,0,0.35);
 }
 
-.subpanel h3 {
-  margin-top: 0;
-  font-size: 1.25rem;
-  margin-bottom: 12px;
+/* ---------------------------------------------------------
+   FORM ELEMENTS
+--------------------------------------------------------- */
+
+label {
+    font-size: .9rem;
+    opacity: 0.9;
 }
 
-/* -----------------------------------------------------------
-   GRID HELPERS
------------------------------------------------------------ */
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-/* -----------------------------------------------------------
-   BUTTONS
------------------------------------------------------------ */
-
-.btn-primary,
-.btn-secondary {
-  padding: 10px 18px;
-  font-size: 1rem;
-  cursor: pointer;
-  border-radius: 8px;
-  border: none;
-  margin-top: 10px;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.15);
-}
-
-.btn-secondary {
-  background: #2c2c31;
-  color: var(--text-light);
-}
-
-.btn-secondary:hover {
-  filter: brightness(1.15);
-}
-
-/* -----------------------------------------------------------
-   ERROR BANNER
------------------------------------------------------------ */
-
-.error-banner {
-  position: fixed;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #d7385e;
-  padding: 10px 18px;
-  border-radius: 8px;
-  color: white;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  z-index: 999;
-  box-shadow: var(--shadow-deep);
-}
-
-.error-banner.hidden {
-  display: none;
-}
-
-#error-close {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.1rem;
-}
-
-/* -----------------------------------------------------------
-   LIST CARD (Souls, Homies, Domains)
------------------------------------------------------------ */
-
-.list-card {
-  background: var(--bg-subpanel);
-  border: 1px solid var(--border-soft);
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-deep);
-}
-
-.list-card h4 {
-  margin: 0 0 6px 0;
-  font-size: 1.2rem;
-}
-
-/* -----------------------------------------------------------
-   ABILITY CARD (NEW STYLE — MATCHES YOUR REFERENCE)
------------------------------------------------------------ */
-
-.ability-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  padding: 18px;
-  margin-bottom: 18px;
-  box-shadow: var(--shadow-deep);
-}
-
-.ability-card.compact {
-  padding: 14px;
-}
-
-/* Header */
-.ability-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ability-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: white;
-}
-
-.ability-power {
-  background: linear-gradient(135deg, #ff5894, #ff316d);
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 0.95rem;
-  font-weight: bold;
-  color: white;
-}
-
-/* Description */
-.ability-description {
-  margin-top: 10px;
-  color: #ddd;
-  font-size: 0.95rem;
-  line-height: 1.4rem;
-}
-
-/* Divider */
-.ability-divider {
-  height: 1px;
-  background: var(--border-soft);
-  margin: 12px 0;
-}
-
-/* Grid for the stats */
-.ability-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px 14px;
-  font-size: 0.92rem;
-}
-
-/* Effect + combo */
-.ability-effect {
-  color: #fff;
-  font-size: 0.95rem;
-}
-
-.ability-combo {
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
-/* Bottom buttons */
-.ability-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-/* -----------------------------------------------------------
-   PLAYABLE VIEW — COLLAPSIBLE SECTIONS
------------------------------------------------------------ */
-
-.playable-wrapper {
-  background: var(--bg-subpanel);
-  margin-bottom: 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-deep);
-}
-
-.collapse-btn {
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 14px;
-  font-size: 1.1rem;
-  color: white;
-  cursor: pointer;
-}
-
-.collapse-btn:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-.collapse-content {
-  display: none;
-  padding: 16px;
-}
-
-.collapse-content.active {
-  display: block;
-}
-
-/* -----------------------------------------------------------
-   RESPONSIVE
------------------------------------------------------------ */
-
-@media (max-width: 900px) {
-  .grid-3 {
-    grid-template-columns: 1fr;
-  }
-
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .side-nav {
-    position: static;
-    height: auto;
+input, select, textarea {
     width: 100%;
+    margin-top: 4px;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: #0f0e1c;
+    color: var(--text-light);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    outline: none;
+    transition: var(--transition);
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 6px var(--accent-blue-glow);
+}
+
+textarea {
+    resize: none;
+    min-height: 60px;
+}
+
+/* ---------------------------------------------------------
+   BUTTONS
+--------------------------------------------------------- */
+
+button, .btn {
+    background: linear-gradient(145deg, var(--accent-blue), #4d8ad4);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 12px var(--accent-blue-glow);
+    transition: var(--transition);
+}
+
+button:hover {
+    filter: brightness(1.15);
+}
+
+.btn-secondary {
+    background: linear-gradient(145deg, var(--accent-pink), #cf45ad);
+    box-shadow: 0 0 12px var(--accent-pink-glow);
+}
+
+/* ---------------------------------------------------------
+   ACCORDION (DROPDOWN CARDS)
+--------------------------------------------------------- */
+
+.accordion {
+    background: var(--bg-card);
+    border-radius: var(--radius-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: var(--border-glow);
+}
+
+.accordion-header {
+    padding: 14px 18px;
+    cursor: pointer;
     display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 10px;
-  }
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text-soft);
+    background: rgba(255,255,255,0.04);
+    transition: var(--transition);
+}
 
-  .nav-btn {
-    flex: 1;
-    text-align: center;
-  }
+.accordion-header:hover {
+    background: rgba(255,255,255,0.08);
+}
 
-  .container {
-    margin-left: 0;
-  }
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+    padding: 0 18px;
+}
+
+.accordion.open .accordion-content {
+    padding: 18px;
+    max-height: 900px; /* auto animated */
+}
+
+/* ---------------------------------------------------------
+   CARD LAYOUT (Abilities + Lair Actions)
+--------------------------------------------------------- */
+
+.ability-card,
+.lair-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-card);
+    padding: 18px 24px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: var(--border-glow);
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--accent-pink);
+}
+
+.card-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--accent-blue);
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    margin-left: 8px;
+}
+
+.card-section {
+    margin-top: 16px;
+}
+
+.card-section label {
+    font-weight: 600;
+    color: var(--text-soft);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.card-section p {
+    margin: 6px 0;
+    line-height: 1.45;
+    color: var(--text-light);
+}
+
+.divider {
+    height: 1px;
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    margin: 16px 0;
+}
+
+/* ---------------------------------------------------------
+   GRID LAYOUT FOR ABILITY STATS
+--------------------------------------------------------- */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 16px;
+}
+
+.stats-item {
+    background: rgba(255,255,255,0.04);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: .85rem;
+}
+
+.stats-item span {
+    display: block;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+/* ---------------------------------------------------------
+   PLAYABLE PANEL
+--------------------------------------------------------- */
+
+.playable-section {
+    background: var(--bg-panel-light);
+    padding: 16px 22px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.playable-title {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--accent-blue);
 }
