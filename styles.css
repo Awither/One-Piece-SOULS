@@ -1,31 +1,42 @@
-/* ===========================
-   Soul-Soul Fruit – Global Theme
-   =========================== */
+/* ------------------------------
+   THEME
+------------------------------ */
 
 :root {
-  --bg-body: #050518;
-  --bg-body-alt: #080a24;
-  --bg-panel: #101532;
-  --bg-panel-soft: #151a3d;
-  --bg-input: #131833;
-  --bg-input-soft: #181e40;
+  --bg-page: #05051a;
+  --bg-header-top: #151545;
+  --bg-header-bottom: #090927;
+  --bg-panel: #111432;
+  --bg-subpanel: #15193c;
+  --bg-subpanel-soft: #181d44;
 
-  --border-glow: #4f46e5;
-  --border-subtle: #262c55;
+  --accent: #ff4fa9;
+  --accent-soft: #ff8fd0;
+  --accent-alt: #42e0ff;
 
-  --accent-pink: #ff4fa8;
-  --accent-pink-soft: #ff8fd0;
-  --accent-cyan: #4fd7ff;
-  --accent-gold: #facc6b;
+  --border-panel: rgba(138, 180, 255, 0.4);
+  --border-subpanel: rgba(151, 170, 255, 0.5);
 
-  --text-main: #f9fafb;
-  --text-muted: #9ca3af;
-  --text-soft: #d1d5db;
+  --text-main: #f7f7ff;
+  --text-muted: #a0a3d0;
+  --text-soft: #7e83c0;
 
-  --danger: #f97373;
+  --danger: #ff5c7a;
+
+  --shadow-panel: 0 0 40px rgba(55, 118, 255, 0.25);
+  --shadow-soft: 0 0 20px rgba(0, 0, 0, 0.6);
+  --radius-large: 18px;
+  --radius-medium: 12px;
+  --radius-small: 8px;
+
+  --transition-fast: 0.15s ease-out;
+  --transition-med: 0.22s ease-out;
 }
 
-/* Reset-ish */
+/* ------------------------------
+   GLOBAL RESET-ish
+------------------------------ */
+
 *,
 *::before,
 *::after {
@@ -36,567 +47,588 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text-main);
+  background: radial-gradient(circle at top, #20256a 0, #05051a 55%, #020112 100%);
+  min-height: 100%;
 }
-
-/* Background & root layout */
 
 body {
-  background:
-    radial-gradient(circle at top left, #22215b 0, transparent 55%),
-    radial-gradient(circle at bottom right, #3b0764 0, transparent 55%),
-    linear-gradient(135deg, var(--bg-body-alt), var(--bg-body));
-  background-attachment: fixed;
+  line-height: 1.4;
 }
 
-.app-root {
-  min-height: 100vh;
-  padding-bottom: 3rem;
-}
-
-/* ===========================
-   Header
-   =========================== */
-
-.app-header {
-  padding: 1.75rem 1.5rem 0.75rem;
-}
-
-.app-header-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.app-title {
-  margin: 0;
-  font-size: 2rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #e5e7ff, #a5b4fc, #f9a8ff);
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: 0 0 14px rgba(129, 140, 248, 0.7);
-}
-
-.app-subtitle {
-  margin: 0.4rem 0 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-/* ===========================
-   Error / success banner
-   =========================== */
+/* ------------------------------
+   ERROR BANNER
+------------------------------ */
 
 .error-banner {
   position: fixed;
-  top: 0.65rem;
+  top: 0.75rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 50;
-
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #11a84a, #7ee083);
+  color: #041405;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  z-index: 1000;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
 
-  padding: 0.6rem 1rem;
-  background: linear-gradient(90deg, #16a34a, #22c55e);
-  color: #022c22;
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  font-size: 0.9rem;
+.error-banner.error {
+  background: linear-gradient(90deg, #ff3b5f, #ff7f9b);
+  color: #230008;
 }
 
 .error-banner.hidden {
   display: none;
 }
 
-#error-error-text {
-  white-space: pre-line;
-}
-
-#error-error-close,
+#error-banner-close,
 #app-error-close {
   border: none;
-  background: rgba(15, 23, 42, 0.12);
+  background: transparent;
   color: inherit;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 0.1rem 0.55rem;
+  font-size: 1.1rem;
   cursor: pointer;
 }
 
-/* make sure both IDs work if typo somewhere */
-#app-error-close {
-  border: none;
+/* ------------------------------
+   HEADER & NAV TABS
+------------------------------ */
+
+.app-header {
+  background: linear-gradient(135deg, var(--bg-header-top), var(--bg-header-bottom));
+  border-bottom: 1px solid rgba(135, 175, 255, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 
-/* ===========================
-   Tabs
-   =========================== */
-
-.app-tabs {
+.header-inner {
   max-width: 1200px;
-  margin: 0.5rem auto 1.25rem;
-  padding: 0.25rem;
+  margin: 0 auto;
+  padding: 1.2rem 1.5rem 1.4rem;
   display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), transparent);
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 255, 0.5);
-  box-shadow: 0 0 35px rgba(79, 70, 229, 0.45);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-/* style all tab buttons even if class is missing */
-.app-tabs button,
-.app-tab {
-  border: none;
-  outline: none;
-  cursor: pointer;
-  padding: 0.45rem 1.35rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+.app-title {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.app-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+/* Tabs */
+
+.top-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: rgba(6, 10, 40, 0.9);
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(187, 209, 255, 0.35);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.6);
+}
+
+.tab-button {
+  border: none;
   background: transparent;
   color: var(--text-soft);
-  transition:
-    background 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.08s ease;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-.app-tabs button:hover {
-  background: radial-gradient(circle at top, rgba(79, 70, 229, 0.55), transparent);
-  color: #e5e7ff;
-  box-shadow: 0 0 18px rgba(79, 70, 229, 0.6);
-  transform: translateY(-1px);
+.tab-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
 }
 
-.app-tabs .active {
-  background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan));
-  color: #0b1022;
-  box-shadow: 0 0 22px rgba(244, 114, 182, 0.85);
+.tab-button:hover {
+  color: #ffffff;
+  background: rgba(90, 112, 255, 0.32);
+  box-shadow: 0 0 18px rgba(75, 115, 255, 0.5);
 }
 
-/* ===========================
-   Main layout & panels
-   =========================== */
+.tab-button:hover::before {
+  opacity: 1;
+}
+
+.tab-button.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent-alt), var(--accent));
+  box-shadow: 0 0 22px rgba(255, 133, 217, 0.7);
+}
+
+/* ------------------------------
+   MAIN LAYOUT
+------------------------------ */
 
 .app-main {
+  padding: 1.8rem 0 3rem;
+}
+
+.app-main-inner {
   max-width: 1200px;
-  margin: 0 auto 3rem;
+  margin: 0 auto;
   padding: 0 1.5rem;
 }
 
-.app-panel {
-  display: none;
-  margin-top: 1rem;
-  padding: 1.75rem 2rem 2rem;
-  background: radial-gradient(circle at top left, #1f2937 0, transparent 65%),
-    radial-gradient(circle at bottom right, #111827 0, transparent 60%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 60, 0.96));
-  border-radius: 20px;
-  border: 1px solid rgba(129, 140, 248, 0.65);
-  box-shadow:
-    0 0 60px rgba(15, 23, 42, 0.9),
-    0 0 45px rgba(79, 70, 229, 0.85);
+/* Panels */
+
+.panel {
+  margin: 0 auto 2rem;
+  background: radial-gradient(circle at top, #1c1f57 0, var(--bg-panel) 38%, #090b26 100%);
+  border-radius: 24px;
+  border: 1px solid var(--border-panel);
+  box-shadow: var(--shadow-panel);
+  padding: 1.6rem 1.8rem 1.8rem;
+  display: none; /* JS toggles */
 }
 
-.app-panel.active {
+.panel.visible {
   display: block;
 }
 
 .panel-title {
-  margin-top: 0;
-  margin-bottom: 1.25rem;
-  font-size: 1.2rem;
-  letter-spacing: 0.04em;
+  margin: 0 0 1.2rem;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #e5e7ff;
+  color: #ffffff;
 }
 
-/* ===========================
-   Generic sections & fields
-   =========================== */
+/* Subpanels */
 
-.panel-section {
-  margin-bottom: 1.4rem;
+.subpanel {
+  background: radial-gradient(circle at top, #242a6a 0, var(--bg-subpanel) 40%, #11132e 100%);
+  border-radius: var(--radius-large);
+  border: 1px solid var(--border-subpanel);
+  box-shadow: var(--shadow-soft);
+  padding: 1.1rem 1.25rem 1.25rem;
+  margin-bottom: 1.2rem;
 }
 
-.panel-section h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-cyan);
+.subpanel-title {
+  margin: 0 0 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fdfdff;
+}
+
+.subpanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Center the panel content inside the big rounded shell */
+
+.panel .subpanel:last-child {
+  margin-bottom: 0;
+}
+
+/* Panel grid (Abilities / Domains 2-column layout) */
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  gap: 1.2rem;
+}
+
+.panel-column {
+  min-width: 0;
+}
+
+/* ------------------------------
+   FORMS
+------------------------------ */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-row.full {
+  grid-column: 1 / -1;
 }
 
 label {
-  display: block;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-soft);
 }
 
 input[type="text"],
 input[type="number"],
-input[type="search"],
 select,
 textarea {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-input);
+  background: rgba(7, 9, 36, 0.96);
+  border-radius: var(--radius-small);
+  border: 1px solid rgba(104, 134, 255, 0.5);
+  padding: 0.45rem 0.55rem;
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   outline: none;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background 0.16s ease;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
 }
 
 textarea {
-  min-height: 80px;
-  resize: none;
+  resize: vertical;
+  min-height: 2.4rem;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 1px rgba(79, 209, 255, 0.5), 0 0 18px rgba(59, 130, 246, 0.8);
-  background-color: var(--bg-input-soft);
+  border-color: var(--accent-alt);
+  box-shadow: 0 0 14px rgba(66, 224, 255, 0.6);
+  background: rgba(7, 11, 52, 1);
 }
 
-/* row of fields */
-.field-row {
+/* Filter input */
+
+.filter-input {
+  width: 180px;
+}
+
+/* Derived stats */
+
+.derived-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0 0.7rem;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-soft);
+}
+
+.stat-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Buttons */
+
+.button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
 }
-
-.field-row > div {
-  flex: 1 1 0;
-  min-width: 150px;
-}
-
-/* ===========================
-   Buttons
-   =========================== */
 
 .btn {
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast), filter var(--transition-fast);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 1.1rem;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.85rem;
+  gap: 0.3rem;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent-alt), #7ff5ff);
+  color: #020516;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition:
-    background 0.16s ease,
-    transform 0.08s ease,
-    box-shadow 0.16s ease;
+  box-shadow: 0 0 18px rgba(78, 211, 255, 0.8);
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan));
-  color: #020617;
-  box-shadow:
-    0 0 18px rgba(248, 113, 182, 0.7),
-    0 0 8px rgba(56, 189, 248, 0.5);
+.btn.accent {
+  background: linear-gradient(135deg, var(--accent), #ff87d2);
+  color: #200012;
+  font-weight: 600;
+  box-shadow: 0 0 18px rgba(255, 102, 186, 0.85);
 }
 
-.btn-primary:hover {
+.btn.secondary {
+  background: rgba(32, 39, 96, 0.9);
+  color: var(--text-main);
+  border: 1px solid rgba(132, 157, 255, 0.7);
+}
+
+.btn.danger {
+  background: linear-gradient(135deg, #ff4267, #ff7f8f);
+  color: #220009;
+  font-weight: 600;
+}
+
+.btn:hover {
   transform: translateY(-1px);
-  box-shadow:
-    0 0 22px rgba(248, 113, 182, 0.9),
-    0 0 12px rgba(56, 189, 248, 0.7);
+  filter: brightness(1.05);
 }
 
-.btn-secondary {
-  background: rgba(15, 23, 42, 0.9);
-  color: var(--text-soft);
-  border: 1px solid rgba(148, 163, 255, 0.7);
+.btn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
-.btn-secondary:hover {
-  background: rgba(30, 64, 175, 0.75);
-  box-shadow: 0 0 18px rgba(59, 130, 246, 0.8);
-}
-
-.btn-danger {
-  background: rgba(239, 68, 68, 0.95);
-  color: #fee2e2;
-}
-
-.btn-danger:hover {
-  background: rgba(248, 113, 113, 1);
-  box-shadow: 0 0 16px rgba(248, 113, 113, 0.85);
-}
-
-/* ===========================
-   Card lists (Souls, Homies, etc.)
-   =========================== */
+/* ------------------------------
+   CARD LISTS
+------------------------------ */
 
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.75rem;
 }
 
+/* Generic card */
+
 .card {
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
-  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.3), transparent 60%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 60, 0.98));
-  border: 1px solid rgba(129, 140, 248, 0.7);
-  box-shadow: 0 0 24px rgba(15, 23, 42, 0.85);
-  font-size: 0.9rem;
+  background: var(--bg-subpanel-soft);
+  border-radius: var(--radius-medium);
+  border: 1px solid rgba(120, 152, 255, 0.8);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.8rem;
 }
 
 .card-header-line {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.35rem;
 }
 
 .card-title {
   font-weight: 600;
-  color: #e5e7ff;
+  color: #ffffff;
 }
 
 .card-subtitle {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* soul / homie / domain tag pills */
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.12rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-}
-
-.pill-blue {
-  background: rgba(56, 189, 248, 0.15);
-  color: var(--accent-cyan);
-}
-
-.pill-pink {
-  background: rgba(244, 114, 182, 0.15);
-  color: var(--accent-pink-soft);
-}
-
-.pill-gold {
-  background: rgba(234, 179, 8, 0.18);
-  color: var(--accent-gold);
-}
-
-/* soul stats row, etc. */
-
-.card-stat-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  margin-bottom: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.card-stat {
+  font-size: 0.74rem;
   color: var(--text-soft);
 }
 
-.card-stat-label {
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-muted);
+  background: rgba(14, 205, 255, 0.12);
+  border: 1px solid rgba(128, 217, 255, 0.9);
+  color: #e0f9ff;
 }
 
-/* footer buttons in cards */
+/* Ability & lair cards (structured) */
 
-.card-footer {
-  margin-top: 0.65rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.4rem;
+.ability-card-list .ability-card {
+  background: var(--bg-subpanel-soft);
+  border-radius: var(--radius-medium);
+  border: 1px solid rgba(149, 180, 255, 0.9);
+  padding: 0.85rem 0.95rem 0.9rem;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.75);
+  font-size: 0.8rem;
 }
 
-/* ===========================
-   Ability & Lair cards – fancy layout
-   =========================== */
-
-.ability-card,
-.lair-card {
-  padding: 1rem 1.1rem 0.95rem;
-}
-
-.ability-header,
-.lair-header {
+.ability-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.ability-card-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ability-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.chip.power {
+  background: rgba(255, 121, 216, 0.2);
+  border-color: rgba(255, 148, 226, 0.95);
+  color: #ffd8fb;
+}
+
+.chip.role {
+  background: rgba(25, 209, 255, 0.1);
+  border-color: rgba(60, 205, 255, 0.9);
+}
+
+.chip.assignee {
+  background: rgba(148, 171, 255, 0.12);
+  border-color: rgba(191, 205, 255, 0.9);
+}
+
+.ability-card-summary {
+  font-size: 0.78rem;
+  color: var(--text-main);
   margin-bottom: 0.45rem;
 }
 
-.ability-name,
-.lair-name {
-  font-weight: 700;
-  font-size: 1rem;
-  color: #f9fafb;
-}
-
-.power-pill {
-  padding: 0.18rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  background: linear-gradient(120deg, var(--accent-pink), var(--accent-cyan));
-  color: #020617;
-}
-
-.ability-role-strip,
-.lair-role-strip {
-  margin-bottom: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.ability-summary,
-.lair-summary {
-  margin: 0 0 0.55rem;
-  font-size: 0.88rem;
-  color: var(--text-soft);
-}
-
-/* stat bar */
-
-.ability-stats,
-.lair-stats {
+.ability-card-meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.4rem 1.2rem;
-  padding: 0.5rem 0.7rem;
-  margin: 0.35rem 0 0.5rem;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 255, 0.4);
-  font-size: 0.8rem;
-}
-
-.stat-label {
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.stat-value {
-  color: var(--text-soft);
-}
-
-/* effect / combo sections */
-
-.ability-effect,
-.lair-effect {
-  font-size: 0.86rem;
-  color: var(--text-soft);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3rem 0.9rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid rgba(84, 105, 190, 0.85);
+  border-bottom: 1px solid rgba(84, 105, 190, 0.85);
   margin-bottom: 0.4rem;
 }
 
-.ability-effect strong,
-.lair-effect strong {
-  color: #e5e7ff;
+.ability-meta-label {
+  font-size: 0.7rem;
+  color: var(--text-soft);
 }
 
-.ability-combo,
-.lair-extra {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-style: italic;
+.ability-meta-value {
+  font-size: 0.78rem;
 }
 
-/* footer buttons override a bit for abilities */
-
-.ability-card .card-footer,
-.lair-card .card-footer {
-  margin-top: 0.75rem;
+.ability-card-effect {
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
 }
 
-/* ===========================
-   Playable view
-   =========================== */
-
-.playable-section {
-  margin-bottom: 1.4rem;
+.ability-card-combo {
+  font-size: 0.75rem;
+  color: var(--text-soft);
 }
 
-.playable-header {
-  margin: 0 0 0.4rem;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-cyan);
+.card-footer-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
 }
 
-.playable-dropdown {
-  margin-bottom: 0.75rem;
+/* Accordion-style lists in Playable View */
+
+.accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-/* ===========================
-   Responsive
-   =========================== */
+.accordion {
+  border-radius: var(--radius-medium);
+  border: 1px solid rgba(120, 152, 255, 0.85);
+  background: var(--bg-subpanel-soft);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
 
-@media (max-width: 900px) {
-  .app-main {
-    padding: 0 0.9rem;
+.accordion-header {
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(45, 63, 155, 0.95), rgba(35, 37, 98, 0.95));
+}
+
+.accordion-title {
+  font-size: 0.82rem;
+}
+
+.accordion-meta {
+  font-size: 0.72rem;
+  color: var(--text-soft);
+}
+
+.accordion-body {
+  padding: 0.6rem 0.75rem 0.7rem;
+  border-top: 1px solid rgba(84, 105, 190, 0.75);
+}
+
+.accordion-chevron {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* ------------------------------
+   RESPONSIVE
+------------------------------ */
+
+@media (max-width: 1024px) {
+  .panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .header-inner {
+    align-items: flex-start;
   }
 
-  .app-panel {
-    padding: 1.3rem 1rem 1.6rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .app-tabs {
-    flex-wrap: wrap;
-    row-gap: 0.35rem;
+  .app-main-inner {
+    padding: 0 1rem;
   }
 
-  .app-tabs button {
-    flex: 1 1 45%;
-    text-align: center;
+  .panel {
+    padding: 1.2rem 1.1rem 1.25rem;
   }
 
-  .field-row {
-    flex-direction: column;
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .ability-stats,
-  .lair-stats {
-    grid-template-columns: 1fr;
+  .derived-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ability-card-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .top-tabs {
+    width: 100%;
+    justify-content: space-between;
   }
 }
