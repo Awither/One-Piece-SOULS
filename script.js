@@ -1,620 +1,1513 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Soul-Soul Fruit Workshop</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <!-- Global error banner -->
-  <div id="app-error-banner" class="error-banner hidden">
-    <span id="app-error-text"></span>
-    <button id="app-error-close" type="button">X</button>
-  </div>
+// =========================================
+// Soul–Soul Fruit Control Panel
+// Main client-side logic
+// =========================================
 
-  <div class="app-shell">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="app-title-row">
-        <h1 class="app-title">Soul-Soul Fruit Control Panel</h1>
-        <p class="app-subtitle">
-          Big Mom–style soul harvesting, homie crafting, domains, abilities, and a combat dashboard.
-        </p>
-      </div>
+/* 
+  Global state
+  (kept very close to your original structure)
+*/
+let Souls = [];
+let Homies = [];
+let Domains = [];
+let Abilities = []; // All ability cards (manual + AI)
+let LastAbilityAIInput = null;
+let LastLairAIInput = null;
 
-      <!-- Top tabs -->
-      <nav class="tab-strip">
-        <button class="tab-button" data-panel="souls">Souls</button>
-        <button class="tab-button" data-panel="homies">Homies</button>
-        <button class="tab-button" data-panel="abilities">Abilities</button>
-        <button class="tab-button" data-panel="domains">Domains</button>
-        <button class="tab-button" data-panel="play">Playable View</button>
-      </nav>
-    </header>
+// -----------------------------------------
+// Utility: safe DOM helpers
+// -----------------------------------------
+function $(sel) {
+  return document.querySelector(sel);
+}
+function $all(sel) {
+  return Array.from(document.querySelectorAll(sel));
+}
 
-    <main class="app-main">
-      <!-- PANEL 1 – SOULS -->
-      <section class="panel" data-panel-id="souls">
-        <div class="panel-inner">
-          <h2 class="panel-title">Panel 1 – Soul Rating &amp; Soul Bank</h2>
+// -----------------------------------------
+// Error / status banner
+// -----------------------------------------
+const appErrorBanner = document.getElementById("app-error-banner");
+const appErrorText = document.getElementById("app-error-text");
+const appErrorClose = document.getElementById("app-error-close");
 
-          <div class="panel-grid">
-            <!-- Left: Soul rating form -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Core Soul Rating (No Math Brain Required)</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="soul-name">Creature Name</label>
-                    <input id="soul-name" type="text" placeholder="Kaido" />
-                  </div>
+function showBanner(message, opts = {}) {
+  if (!appErrorBanner || !appErrorText) {
+    console.log("Banner:", message);
+    return;
+  }
+  const { type = "success", sticky = false } = opts;
+  appErrorBanner.classList.remove("hidden", "error");
+  if (type === "error") {
+    appErrorBanner.classList.add("error");
+  }
+  appErrorText.textContent = message;
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="soul-might">Raw Might (1–10)</label>
-                      <input id="soul-might" type="number" min="1" max="10" />
-                    </div>
-                    <div class="field">
-                      <label for="soul-tier">Proficiency Tier (0–9)</label>
-                      <select id="soul-tier">
-                        <option value="0">0 – Scrub</option>
-                        <option value="1">1 – Rookie</option>
-                        <option value="2">2 – Rising Threat</option>
-                        <option value="3">3 – Veteran</option>
-                        <option value="4">4 – Elite</option>
-                        <option value="5">5 – Warlord</option>
-                        <option value="6">6 – Admiral</option>
-                        <option value="7">7 – Yonko</option>
-                        <option value="8">8 – Monster</option>
-                        <option value="9">9 – Mythical</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label for="soul-will">Willpower Level (1–10)</label>
-                      <input id="soul-will" type="number" min="1" max="10" />
-                    </div>
-                  </div>
+  if (!sticky) {
+    setTimeout(() => {
+      appErrorBanner.classList.add("hidden");
+    }, 4000);
+  }
+}
 
-                  <div class="field">
-                    <label for="soul-tags">Traits / Tags (optional)</label>
-                    <input id="soul-tags" type="text" placeholder="stubborn, marine, zealot" />
-                  </div>
+if (appErrorClose) {
+  appErrorClose.addEventListener("click", () => {
+    appErrorBanner.classList.add("hidden");
+  });
+}
 
-                  <div class="field">
-                    <label for="soul-notes">Soul Notes</label>
-                    <textarea id="soul-notes" rows="2"
-                      placeholder="Flavor, backstory, what broke their will, how they reacted…"></textarea>
-                  </div>
+// -----------------------------------------
+// LocalStorage persistence
+// -----------------------------------------
+const STORAGE_KEY = "soul_soul_workshop_v3";
 
-                  <div class="stats-row">
-                    <div class="stat-box">
-                      <div class="stat-label">Combined Rating</div>
-                      <div class="stat-value" id="soul-rating">0</div>
-                    </div>
-                    <div class="stat-box">
-                      <div class="stat-label">Level (SoL)</div>
-                      <div class="stat-value" id="soul-level">1</div>
-                    </div>
-                    <div class="stat-box">
-                      <div class="stat-label">Soul Energy (SPU)</div>
-                      <div class="stat-value" id="soul-spu">0</div>
-                    </div>
-                    <div class="stat-box">
-                      <div class="stat-label">Suggested Max HP Lost</div>
-                      <div class="stat-value" id="soul-hp">2</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-recalc-soul" class="btn secondary" type="button">
-                    Recalculate Soul Rating
-                  </button>
-                  <button id="btn-add-soul" class="btn primary" type="button">
-                    Add Soul to Bank
-                  </button>
-                </div>
-              </div>
-            </div>
+function saveAll() {
+  try {
+    const payload = {
+      souls: Souls,
+      homies: Homies,
+      domains: Domains,
+      abilities: Abilities
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.error("Failed to save:", err);
+  }
+}
 
-            <!-- Right: Soul bank list -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Soul Bank</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="soul-filter">Filter Souls</label>
-                    <input id="soul-filter" type="text" placeholder="Search by name…" />
-                  </div>
-                  <div id="soul-bank-list" class="card-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+function loadAll() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    Souls = Array.isArray(data.souls) ? data.souls : [];
+    Homies = Array.isArray(data.homies) ? data.homies : [];
+    Domains = Array.isArray(data.domains) ? data.domains : [];
+    Abilities = Array.isArray(data.abilities) ? data.abilities : [];
+  } catch (err) {
+    console.error("Failed to load:", err);
+  }
+}
 
-      <!-- PANEL 2 – HOMIES -->
-      <section class="panel" data-panel-id="homies">
-        <div class="panel-inner">
-          <h2 class="panel-title">Panel 2 – Homies (Creation &amp; Upgrades)</h2>
+function uuid() {
+  return (
+    "id_" +
+    Math.random().toString(16).slice(2) +
+    "_" +
+    Date.now().toString(16)
+  );
+}
 
-          <div class="panel-grid">
-            <!-- Left column: Create Homie -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Create a Homie</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="homie-name">Homie Name</label>
-                    <input id="homie-name" type="text" placeholder="Panther" />
-                  </div>
+// -----------------------------------------
+// Tabs
+// -----------------------------------------
+function initTabs() {
+  const tabButtons = $all(".tab-button[data-panel]");
+  const panels = $all(".panel[data-panel-id]");
+  if (!tabButtons.length || !panels.length) return;
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="homie-type">Homie Type</label>
-                      <select id="homie-type">
-                        <option value="Signature Homie">Signature Homie (elite companion)</option>
-                        <option value="Territory Homie">Territory Homie</option>
-                        <option value="Minor Homie">Minor Homie</option>
-                        <option value="Buff Homie">Buff / Support Homie</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label for="homie-linked-soul">Linked Soul (optional)</label>
-                      <select id="homie-linked-soul" data-soul-options>
-                        <option value="">— None —</option>
-                      </select>
-                    </div>
-                  </div>
+  function activate(panelName) {
+    panels.forEach((panel) => {
+      const id = panel.dataset.panelId;
+      panel.classList.toggle("visible", id === panelName);
+    });
+    tabButtons.forEach((btn) => {
+      const target = btn.dataset.panel;
+      btn.classList.toggle("active", target === panelName);
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="homie-spu">Initial SPU Investment</label>
-                      <input id="homie-spu" type="number" min="0" />
-                    </div>
-                    <div class="field">
-                      <label for="homie-role">Role / Concept</label>
-                      <input id="homie-role" type="text" placeholder="Support, artillery, healer…" />
-                    </div>
-                  </div>
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.panel;
+      if (target) {
+        activate(target);
+      }
+    });
+  });
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="homie-hp">HP</label>
-                      <input id="homie-hp" type="number" />
-                    </div>
-                    <div class="field">
-                      <label for="homie-ac">AC</label>
-                      <input id="homie-ac" type="number" />
-                    </div>
-                    <div class="field">
-                      <label for="homie-move">Movement</label>
-                      <input id="homie-move" type="number" />
-                    </div>
-                  </div>
+  // Default: Souls tab, else first tab
+  const defaultPanel = "souls";
+  const hasSouls = tabButtons.some((b) => b.dataset.panel === defaultPanel);
+  const initial = hasSouls
+    ? defaultPanel
+    : tabButtons[0]
+    ? tabButtons[0].dataset.panel
+    : null;
 
-                  <div class="field">
-                    <label for="homie-attack">Primary Damage / Attack</label>
-                    <input id="homie-attack" type="text" placeholder="1d12 slashing, 2d10 fire, etc." />
-                  </div>
+  if (initial) activate(initial);
+}
 
-                  <div class="field">
-                    <label for="homie-personality">Personality Traits (from souls used)</label>
-                    <input
-                      id="homie-personality"
-                      type="text"
-                      placeholder="arrogant, gluttonous, storm-obsessed, loyal…"
-                    />
-                  </div>
+// -----------------------------------------
+// Auto-expand textareas (no scrollbars)
+// -----------------------------------------
+function autoExpand(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + 2 + "px";
+}
 
-                  <div class="field">
-                    <label for="homie-location">Bound Location (Territory Homies)</label>
-                    <input
-                      id="homie-location"
-                      type="text"
-                      placeholder="Southern Gate of Montblanc City"
-                    />
-                  </div>
+function initTextareaAutoExpand() {
+  $all("textarea").forEach((t) => {
+    autoExpand(t);
+    t.addEventListener("input", () => autoExpand(t));
+  });
+}
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="homie-domain">Assigned Domain</label>
-                      <select id="homie-domain" data-domain-options>
-                        <option value="">— None —</option>
-                      </select>
-                    </div>
-                  </div>
+// =========================================
+// Panel 1 – Souls
+// =========================================
 
-                  <div class="field">
-                    <label for="homie-support">Buff / Support Effects / Notes</label>
-                    <textarea
-                      id="homie-support"
-                      rows="3"
-                      placeholder="Healing aura, reroll saves, once-per-round advantage, temp HP, etc."
-                    ></textarea>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-create-homie" class="btn primary" type="button">Create Homie</button>
-                </div>
-              </div>
-            </div>
+function initSoulsPanel() {
+  const nameEl = $("#soul-name");
+  const mightEl = $("#soul-might");
+  const tierEl = $("#soul-tier");
+  const willEl = $("#soul-will");
+  const tagsEl = $("#soul-tags");
+  const notesEl = $("#soul-notes");
 
-            <!-- Right column: roster -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Homie Roster &amp; Upgrades</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="homie-filter">Filter Homies</label>
-                    <input id="homie-filter" type="text" placeholder="Search homies…" />
-                  </div>
-                  <div id="homie-roster-list" class="card-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+  const ratingEl = $("#soul-rating");
+  const levelEl = $("#soul-level");
+  const spuEl = $("#soul-spu");
+  const hpEl = $("#soul-hp");
 
-      <!-- PANEL 3 – ABILITIES -->
-      <section class="panel" data-panel-id="abilities">
-        <div class="panel-inner">
-          <h2 class="panel-title">Panel 3 – Ability Cards (Manual &amp; AI)</h2>
+  const recalcBtn = $("#btn-recalc-soul");
+  const addBtn = $("#btn-add-soul");
+  const bankList = $("#soul-bank-list");
+  const filterInput = $("#soul-filter");
 
-          <div class="panel-grid">
-            <!-- Left: Manual + AI generators -->
-            <div class="panel-grid-col">
-              <!-- Manual ability -->
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Manual Ability</div>
-                </div>
-                <div class="card-body">
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="manual-ability-name">Ability Name</label>
-                      <input id="manual-ability-name" type="text" placeholder="Chaos" />
-                    </div>
-                    <div class="field">
-                      <label for="manual-ability-power">Power (1–10)</label>
-                      <input id="manual-ability-power" type="number" min="1" max="10" value="7" />
-                    </div>
-                  </div>
+  if (!nameEl || !bankList) return; // panel not present
 
-                  <div class="field">
-                    <label for="manual-ability-short">Short Description (summary)</label>
-                    <textarea
-                      id="manual-ability-short"
-                      rows="2"
-                      placeholder="Vines erupt from the ground and restrain enemies…"
-                    ></textarea>
-                  </div>
+  function calculateSoul() {
+    const might = parseInt(mightEl.value, 10) || 0;
+    const tier = parseInt(tierEl.value, 10) || 0;
+    const will = parseInt(willEl.value, 10) || 0;
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="manual-ability-action">Action Type</label>
-                      <input id="manual-ability-action" type="text" placeholder="Action, Bonus Action, Reaction…" />
-                    </div>
-                    <div class="field">
-                      <label for="manual-ability-range">Range</label>
-                      <input id="manual-ability-range" type="text" placeholder="30 ft radius, 60 ft line…" />
-                    </div>
-                    <div class="field">
-                      <label for="manual-ability-target">Target</label>
-                      <input id="manual-ability-target" type="text" placeholder="Single creature, all enemies…" />
-                    </div>
-                  </div>
+    const combined = might * 2 + tier * 3 + will * 5;
+    const SoL = Math.max(1, Math.floor(combined / 10));
+    const SPU = Math.floor(combined * 8.5);
+    const HP = Math.floor(SoL * 2);
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="manual-ability-save">Save</label>
-                      <input id="manual-ability-save" type="text" placeholder="Strength, Dex, Wis…" />
-                    </div>
-                    <div class="field">
-                      <label for="manual-ability-dc">DC</label>
-                      <input id="manual-ability-dc" type="number" />
-                    </div>
-                    <div class="field">
-                      <label for="manual-ability-damage">Damage</label>
-                      <input
-                        id="manual-ability-damage"
-                        type="text"
-                        placeholder="6d10 necrotic, 4d8 fire + 4d8 thunder…"
-                      />
-                    </div>
-                  </div>
+    if (ratingEl) ratingEl.textContent = combined;
+    if (levelEl) levelEl.textContent = SoL;
+    if (spuEl) spuEl.textContent = SPU;
+    if (hpEl) hpEl.textContent = HP;
 
-                  <div class="field">
-                    <label for="manual-ability-effect">Full Effect Description</label>
-                    <textarea
-                      id="manual-ability-effect"
-                      rows="4"
-                      placeholder="What happens on a failed save, half on success, conditions, battlefield changes, etc."
-                    ></textarea>
-                  </div>
+    return { combined, SoL, SPU, HP };
+  }
 
-                  <div class="field">
-                    <label for="manual-ability-combo">Combo / Interaction Notes</label>
-                    <textarea
-                      id="manual-ability-combo"
-                      rows="2"
-                      placeholder="How this interacts with Homies, Domains, or other abilities."
-                    ></textarea>
-                  </div>
+  function renderSoulBank() {
+    const filter = (filterInput?.value || "").toLowerCase();
+    bankList.innerHTML = "";
 
-                  <div class="field">
-                    <label for="manual-ability-assign">Assign To</label>
-                    <select id="manual-ability-assign">
-                      <option value="general">General / Party</option>
-                      <!-- You can manually add homie:/domain: IDs once created, or we can automate later -->
-                    </select>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-manual-ability-save" class="btn primary" type="button">
-                    Save Ability
-                  </button>
-                </div>
-              </div>
+    Souls.filter((soul) =>
+      !filter ? true : soul.name.toLowerCase().includes(filter)
+    ).forEach((soul) => {
+      const card = document.createElement("div");
+      card.className = "card";
 
-              <!-- AI ability -->
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">AI Ability Generator</div>
-                </div>
-                <div class="card-body">
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="ai-ability-power">Power Level (1–10)</label>
-                      <input id="ai-ability-power" type="number" min="1" max="10" value="9" />
-                    </div>
-                    <div class="field">
-                      <label for="ai-ability-role">Role</label>
-                      <select id="ai-ability-role">
-                        <option value="Offense">Offense</option>
-                        <option value="Defense">Defense</option>
-                        <option value="Support">Support</option>
-                        <option value="Control">Control</option>
-                        <option value="Utility">Utility</option>
-                        <option value="Reality-Bending">Reality-Bending</option>
-                      </select>
-                    </div>
-                  </div>
+      const header = document.createElement("div");
+      header.className = "card-header-line";
 
-                  <div class="field">
-                    <label for="ai-ability-prompt">Concept / What You Want</label>
-                    <textarea
-                      id="ai-ability-prompt"
-                      rows="3"
-                      placeholder="Vines erupt from the ground and restrain enemies while dealing psychic damage…"
-                    ></textarea>
-                  </div>
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = soul.name;
 
-                  <div class="field">
-                    <label for="ai-ability-assign">Assign To</label>
-                    <select id="ai-ability-assign">
-                      <option value="general">General / Party</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-ai-ability-generate" class="btn primary" type="button">
-                    Generate Ability
-                  </button>
-                  <button id="btn-ai-ability-reroll" class="btn secondary" type="button">
-                    Reroll Last
-                  </button>
-                </div>
-              </div>
-            </div>
+      const chips = document.createElement("div");
+      chips.className = "ability-card-tags";
+      const levelChip = document.createElement("span");
+      levelChip.className = "chip";
+      levelChip.textContent = `SoL ${soul.level}`;
+      const spuChip = document.createElement("span");
+      spuChip.className = "chip";
+      spuChip.textContent = `${soul.spu} SPU`;
+      chips.append(levelChip, spuChip);
 
-            <!-- Right: Ability list -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">All Abilities</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="ability-filter">Filter Abilities</label>
-                    <input id="ability-filter" type="text" placeholder="Search abilities…" />
-                  </div>
-                  <div id="ability-list" class="card-list ability-card-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      header.append(title, chips);
+      card.appendChild(header);
 
-      <!-- PANEL 4 – DOMAINS & LAIR ACTIONS -->
-      <section class="panel" data-panel-id="domains">
-        <div class="panel-inner">
-          <h2 class="panel-title">Panel 4 – Domains &amp; Lair Actions</h2>
+      const body = document.createElement("div");
+      body.style.fontSize = "0.78rem";
+      body.innerHTML =
+        `<div><span class="stat-label">Rating:</span> ${soul.rating}</div>` +
+        `<div><span class="stat-label">HP Lost:</span> ${soul.hp}</div>` +
+        (soul.tags
+          ? `<div><span class="stat-label">Traits:</span> ${soul.tags}</div>`
+          : "") +
+        (soul.notes
+          ? `<div><span class="stat-label">Notes:</span> ${soul.notes}</div>`
+          : "");
+      card.appendChild(body);
 
-          <div class="panel-grid">
-            <!-- LEFT column: Create Domain + overview -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Create a Domain</div>
-                </div>
-                <div class="card-body">
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="domain-name">Domain Name</label>
-                      <input id="domain-name" type="text" placeholder="Wano" />
-                    </div>
-                    <div class="field">
-                      <label for="domain-tier">Domain Tier (1–10)</label>
-                      <input id="domain-tier" type="number" min="1" max="10" value="8" />
-                    </div>
-                    <div class="field">
-                      <label for="domain-spu">SPU Invested</label>
-                      <input id="domain-spu" type="number" min="0" />
-                    </div>
-                  </div>
+      const footer = document.createElement("div");
+      footer.className = "card-footer-row";
 
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="domain-dc">Passive Fear DC (entering enemies)</label>
-                      <input id="domain-dc" type="number" min="0" />
-                    </div>
-                    <div class="field">
-                      <label for="domain-range">Territory Size / Range</label>
-                      <input id="domain-range" type="text" placeholder="100 miles" />
-                    </div>
-                  </div>
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn secondary";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () => {
+        Souls = Souls.filter((s) => s.id !== soul.id);
+        saveAll();
+        renderSoulBank();
+        refreshLinkedSoulOptions();
+      });
 
-                  <div class="field">
-                    <label for="domain-personality">Environmental Personality</label>
-                    <textarea
-                      id="domain-personality"
-                      rows="2"
-                      placeholder="Heavily wooded land with living trees that consume, drain soul energy from, and trap enemies."
-                    ></textarea>
-                  </div>
+      footer.appendChild(delBtn);
+      card.appendChild(footer);
 
-                  <div class="field">
-                    <label for="domain-notes">Domain Notes</label>
-                    <textarea
-                      id="domain-notes"
-                      rows="2"
-                      placeholder="Extra flavor, politics, who rules here, etc."
-                    ></textarea>
-                  </div>
+      bankList.appendChild(card);
+    });
 
-                  <div class="field">
-                    <label for="domain-homies">Assign Territory Homies</label>
-                    <select id="domain-homies" data-homie-options multiple size="4"></select>
-                    <p class="help-text">Hold Ctrl/Cmd to select multiple Territory Homies.</p>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-create-domain" class="btn primary" type="button">Save Domain</button>
-                </div>
-              </div>
+    refreshLinkedSoulOptions();
+  }
 
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Domains Overview</div>
-                </div>
-                <div class="card-body">
-                  <div class="field">
-                    <label for="domain-filter">Filter Domains</label>
-                    <input id="domain-filter" type="text" placeholder="Search domains…" />
-                  </div>
-                  <div id="domain-list" class="card-list"></div>
-                </div>
-              </div>
-            </div>
+  if (recalcBtn) {
+    recalcBtn.addEventListener("click", () => {
+      calculateSoul();
+    });
+  }
 
-            <!-- RIGHT column: AI Lair generator + Lair cards -->
-            <div class="panel-grid-col">
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">AI Lair Action Generator</div>
-                </div>
-                <div class="card-body">
-                  <div class="field-row">
-                    <div class="field">
-                      <label for="lair-domain">Domain</label>
-                      <select id="lair-domain" data-domain-options>
-                        <option value="">Select a domain…</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label for="lair-power">Power Level (1–10)</label>
-                      <input id="lair-power" type="number" min="1" max="10" value="10" />
-                    </div>
-                    <div class="field">
-                      <label for="lair-count">Number of Lair Actions</label>
-                      <input id="lair-count" type="number" min="1" max="5" value="3" />
-                    </div>
-                  </div>
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      const { combined, SoL, SPU, HP } = calculateSoul();
+      const soul = {
+        id: uuid(),
+        name: nameEl.value.trim() || "Unnamed Soul",
+        might: parseInt(mightEl.value, 10) || 0,
+        tier: parseInt(tierEl.value, 10) || 0,
+        will: parseInt(willEl.value, 10) || 0,
+        rating: combined,
+        level: SoL,
+        spu: SPU,
+        hp: HP,
+        tags: tagsEl.value.trim(),
+        notes: notesEl.value.trim()
+      };
+      Souls.push(soul);
+      saveAll();
+      renderSoulBank();
+      refreshLinkedSoulOptions();
+      showBanner("Soul added to bank ✓");
+    });
+  }
 
-                  <div class="field">
-                    <label for="lair-prompt">Domain Personality / Extra Notes for AI</label>
-                    <textarea
-                      id="lair-prompt"
-                      rows="3"
-                      placeholder="Optional: any extra flavor or requested themes beyond the domain description."
-                    ></textarea>
-                  </div>
-                </div>
-                <div class="card-footer-row">
-                  <button id="btn-lair-generate" class="btn primary" type="button">
-                    Generate Lair Actions
-                  </button>
-                  <button id="btn-lair-reroll" class="btn secondary" type="button">
-                    Reroll Last Set
-                  </button>
-                </div>
-              </div>
+  if (filterInput) {
+    filterInput.addEventListener("input", () => renderSoulBank());
+  }
 
-              <div class="card">
-                <div class="card-header-line">
-                  <div class="card-title">Lair Action Cards</div>
-                </div>
-                <div class="card-body">
-                  <div id="lair-card-list" class="card-list ability-card-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+  // initial values
+  calculateSoul();
+  renderSoulBank();
+}
 
-      <!-- PANEL 5 – PLAYABLE VIEW -->
-      <section class="panel" data-panel-id="play">
-        <div class="panel-inner">
-          <h2 class="panel-title">Panel 5 – Soul Party Dashboard (Playable View)</h2>
-          <p class="panel-description">
-            Snapshot of your Homies, Domains, and key abilities. Use the dropdown-style accordions during play
-            to quickly see stats and attacks.
-          </p>
+// -----------------------------------------
+// Shared dropdown refresh
+// -----------------------------------------
 
-          <div class="card">
-            <div class="card-header-line">
-              <div class="card-title">Homies</div>
-            </div>
-            <div class="card-body">
-              <div id="play-homies" class="accordion-list"></div>
-            </div>
-          </div>
+function refreshLinkedSoulOptions() {
+  const linkedSoulSelects = $all("[data-soul-options]");
+  linkedSoulSelects.forEach((select) => {
+    const prev = select.value;
+    select.innerHTML = "";
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "— None —";
+    select.appendChild(emptyOpt);
 
-          <div class="card">
-            <div class="card-header-line">
-              <div class="card-title">Domains</div>
-            </div>
-            <div class="card-body">
-              <div id="play-domains" class="accordion-list"></div>
-            </div>
-          </div>
+    Souls.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `${s.name} (${s.spu} SPU)`;
+      select.appendChild(opt);
+    });
+    if (prev) select.value = prev;
+  });
+}
 
-          <div class="card">
-            <div class="card-header-line">
-              <div class="card-title">All Abilities (Quick Reference)</div>
-            </div>
-            <div class="card-body">
-              <div id="play-abilities" class="card-list ability-card-list"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
+function refreshHomieOptions() {
+  const homieSelects = $all("[data-homie-options]");
+  homieSelects.forEach((select) => {
+    const prev = select.value;
+    select.innerHTML = "";
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "— None —";
+    select.appendChild(emptyOpt);
 
-  <script src="script.js"></script>
-</body>
-</html>
+    Homies.forEach((h) => {
+      const opt = document.createElement("option");
+      opt.value = h.id;
+      opt.textContent = `${h.name} (HP ${h.hp}, AC ${h.ac})`;
+      select.appendChild(opt);
+    });
+    if (prev) select.value = prev;
+  });
+}
+
+function refreshDomainOptions() {
+  const domainSelects = $all("[data-domain-options]");
+  domainSelects.forEach((select) => {
+    const prev = select.value;
+    select.innerHTML = "";
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "— None —";
+    select.appendChild(emptyOpt);
+
+    Domains.forEach((d) => {
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = d.name;
+      select.appendChild(opt);
+    });
+    if (prev) select.value = prev;
+  });
+}
+
+// =========================================
+// Panel 2 – Homies
+// =========================================
+
+function initHomiesPanel() {
+  const nameEl = $("#homie-name");
+  const typeEl = $("#homie-type");
+  const linkedSoulEl = $("#homie-linked-soul");
+  const spuEl = $("#homie-spu");
+  const roleEl = $("#homie-role");
+  const hpEl = $("#homie-hp");
+  const acEl = $("#homie-ac");
+  const moveEl = $("#homie-move");
+  const attackEl = $("#homie-attack");
+  const personalityEl = $("#homie-personality");
+  const locationEl = $("#homie-location");
+  const domainEl = $("#homie-domain");
+  const notesEl = $("#homie-support");
+
+  const createBtn = $("#btn-create-homie");
+  const rosterList = $("#homie-roster-list");
+  const rosterFilter = $("#homie-filter");
+
+  if (!nameEl || !rosterList) return; // panel missing
+
+  function renderHomies() {
+    const filter = (rosterFilter?.value || "").toLowerCase();
+    rosterList.innerHTML = "";
+
+    Homies.filter((h) =>
+      !filter ? true : h.name.toLowerCase().includes(filter)
+    ).forEach((h) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const header = document.createElement("div");
+      header.className = "card-header-line";
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = h.name;
+
+      const tags = document.createElement("div");
+      tags.className = "ability-card-tags";
+      const typeChip = document.createElement("span");
+      typeChip.className = "chip";
+      typeChip.textContent = h.type || "Homie";
+      const roleChip = document.createElement("span");
+      roleChip.className = "chip";
+      roleChip.textContent = h.role || "Role N/A";
+      tags.append(typeChip, roleChip);
+
+      header.append(title, tags);
+      card.appendChild(header);
+
+      const body = document.createElement("div");
+      body.style.fontSize = "0.78rem";
+      body.innerHTML =
+        `<div><span class="stat-label">HP:</span> ${h.hp || "—"} &nbsp;` +
+        `<span class="stat-label">AC:</span> ${h.ac || "—"} &nbsp;` +
+        `<span class="stat-label">Move:</span> ${h.move || "—"}</div>` +
+        (h.attack
+          ? `<div><span class="stat-label">Primary Attack:</span> ${h.attack}</div>`
+          : "") +
+        (h.personality
+          ? `<div><span class="stat-label">Personality:</span> ${h.personality}</div>`
+          : "") +
+        (h.location
+          ? `<div><span class="stat-label">Location:</span> ${h.location}</div>`
+          : "") +
+        (h.notes
+          ? `<div><span class="stat-label">Notes:</span> ${h.notes}</div>`
+          : "");
+      card.appendChild(body);
+
+      const footer = document.createElement("div");
+      footer.className = "card-footer-row";
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn secondary";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () => {
+        Homies = Homies.filter((x) => x.id !== h.id);
+        saveAll();
+        renderHomies();
+        refreshHomieOptions();
+      });
+
+      footer.appendChild(delBtn);
+      card.appendChild(footer);
+
+      rosterList.appendChild(card);
+    });
+
+    refreshHomieOptions();
+  }
+
+  if (createBtn) {
+    createBtn.addEventListener("click", () => {
+      const homie = {
+        id: uuid(),
+        name: nameEl.value.trim() || "Unnamed Homie",
+        type: typeEl.value || "Homie",
+        linkedSoulId: linkedSoulEl?.value || "",
+        spu: parseInt(spuEl.value, 10) || 0,
+        role: roleEl.value.trim(),
+        hp: parseInt(hpEl.value, 10) || 0,
+        ac: parseInt(acEl.value, 10) || 0,
+        move: parseInt(moveEl.value, 10) || 0,
+        attack: attackEl.value.trim(),
+        personality: personalityEl.value.trim(),
+        location: locationEl.value.trim(),
+        domainId: domainEl?.value || "",
+        notes: notesEl.value.trim()
+      };
+      Homies.push(homie);
+      saveAll();
+      renderHomies();
+      refreshHomieOptions();
+      showBanner("Homie added ✓");
+    });
+  }
+
+  if (rosterFilter) {
+    rosterFilter.addEventListener("input", () => renderHomies());
+  }
+
+  renderHomies();
+}
+
+// =========================================
+// Abilities – helpers to parse text into card meta
+// =========================================
+
+function parseAbilityText(rawText) {
+  const meta = {
+    action: "—",
+    range: "—",
+    target: "—",
+    save: "—",
+    damage: "—",
+    summary: "",
+    effect: rawText || "",
+    combo: ""
+  };
+  if (!rawText) return meta;
+
+  const getFieldLine = (labels) => {
+    const pattern =
+      "(?:^|\\n)\\s*(?:" +
+      labels.map((l) => l.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|") +
+      ")\\s*[:=]\\s*([^\\n]+)";
+    const re = new RegExp(pattern, "i");
+    const m = rawText.match(re);
+    return m ? m[1].trim() : "";
+  };
+
+  meta.action = getFieldLine(["Action", "Action Type"]) || "—";
+  meta.range = getFieldLine(["Range"]) || "—";
+  meta.target = getFieldLine(["Target"]) || "—";
+  const saveLine =
+    getFieldLine(["Save", "Save/DC", "Saving Throw"]) || "—";
+  meta.save = saveLine;
+  meta.damage = getFieldLine(["Damage", "Damage / Effect"]) || "—";
+
+  // Effect & summary
+  let effectSection = rawText;
+  const effMatch = rawText.match(
+    /(Effect|Description)\s*[:=]\s*([\s\S]*)/i
+  );
+  if (effMatch) {
+    effectSection = effMatch[2].trim();
+  }
+
+  const comboMatch = effectSection.match(/Combo\s*[:=]\s*([\s\S]*)/i);
+  if (comboMatch) {
+    meta.combo = comboMatch[1].trim();
+    effectSection = effectSection.replace(comboMatch[0], "").trim();
+  }
+
+  const firstSentenceMatch = effectSection.match(
+    /(.+?[.!?])(\s|$)/
+  );
+  if (firstSentenceMatch) {
+    meta.summary = firstSentenceMatch[1].trim();
+  } else {
+    meta.summary = effectSection.slice(0, 160).trim();
+  }
+  meta.effect = effectSection;
+
+  return meta;
+}
+
+// =========================================
+// Panel 3 – Abilities
+// =========================================
+
+function initAbilitiesPanel() {
+  const manualName = $("#manual-ability-name");
+  const manualPower = $("#manual-ability-power");
+  const manualShort = $("#manual-ability-short");
+  const manualAction = $("#manual-ability-action");
+  const manualRange = $("#manual-ability-range");
+  const manualTarget = $("#manual-ability-target");
+  const manualSave = $("#manual-ability-save");
+  const manualDC = $("#manual-ability-dc");
+  const manualDamage = $("#manual-ability-damage");
+  const manualEffect = $("#manual-ability-effect");
+  const manualCombo = $("#manual-ability-combo");
+  const manualAssign = $("#manual-ability-assign");
+
+  const manualSaveBtn = $("#btn-manual-ability-save");
+
+  const aiPower = $("#ai-ability-power");
+  const aiRole = $("#ai-ability-role");
+  const aiPrompt = $("#ai-ability-prompt");
+  const aiAssign = $("#ai-ability-assign");
+  const aiGenerateBtn = $("#btn-ai-ability-generate");
+  const aiRerollBtn = $("#btn-ai-ability-reroll");
+
+  const abilityFilter = $("#ability-filter");
+  const abilityList = $("#ability-list");
+
+  if (!abilityList) return; // panel may not exist yet
+
+  // ---- Save manual ability ----
+  if (manualSaveBtn && manualName) {
+    manualSaveBtn.addEventListener("click", () => {
+      const textParts = [];
+
+      if (manualAction.value)
+        textParts.push(`Action: ${manualAction.value}`);
+      if (manualRange.value)
+        textParts.push(`Range: ${manualRange.value}`);
+      if (manualTarget.value)
+        textParts.push(`Target: ${manualTarget.value}`);
+      if (manualSave.value || manualDC.value)
+        textParts.push(
+          `Save/DC: ${manualSave.value || ""} ${
+            manualDC.value ? "DC " + manualDC.value : ""
+          }`.trim()
+        );
+      if (manualDamage.value)
+        textParts.push(`Damage: ${manualDamage.value}`);
+      if (manualShort.value)
+        textParts.push(`Description: ${manualShort.value}`);
+      if (manualEffect.value)
+        textParts.push(`Effect: ${manualEffect.value}`);
+      if (manualCombo.value)
+        textParts.push(`Combo: ${manualCombo.value}`);
+
+      const rawText = textParts.join("\n");
+
+      const ability = {
+        id: uuid(),
+        name: manualName.value.trim() || "Unnamed Ability",
+        power: parseInt(manualPower.value, 10) || null,
+        role: null,
+        assignToType: inferAssignType(manualAssign?.value),
+        assignToId: manualAssign?.value || "",
+        rawText
+      };
+
+      Abilities.push(ability);
+      saveAll();
+      renderAbilityList();
+      showBanner("Ability saved ✓");
+    });
+  }
+
+  // ---- AI ability generation ----
+  if (aiGenerateBtn && aiPrompt) {
+    aiGenerateBtn.addEventListener("click", async () => {
+      const concept = aiPrompt.value.trim();
+      const power = parseInt(aiPower?.value, 10) || 7;
+      const role = aiRole?.value || "Offense";
+
+      if (!concept) {
+        showBanner("Enter a concept / what you want first.", {
+          type: "error"
+        });
+        return;
+      }
+
+      LastAbilityAIInput = { concept, power, role, assignValue: aiAssign?.value || "" };
+
+      try {
+        aiGenerateBtn.disabled = true;
+        aiGenerateBtn.textContent = "Generating…";
+
+        const res = await fetch("/api/generate-soul-abilities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "abilityCard", // uses your existing endpoint; if unsupported it will just fall back to plain text handling
+            concept,
+            power,
+            role,
+            souls: Souls,
+            homies: Homies,
+            domains: Domains
+          })
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+
+        const text =
+          (typeof data === "string"
+            ? data
+            : data.text || data.ability || data.result) || "";
+
+        const ability = {
+          id: uuid(),
+          name: data.name || "Unnamed Ability",
+          power,
+          role,
+          assignToType: inferAssignType(aiAssign?.value),
+          assignToId: aiAssign?.value || "",
+          rawText: text || concept
+        };
+        Abilities.push(ability);
+        saveAll();
+        renderAbilityList();
+        showBanner("AI ability generated ✓");
+      } catch (err) {
+        console.error(err);
+        showBanner("AI ability generation failed.", { type: "error" });
+      } finally {
+        aiGenerateBtn.disabled = false;
+        aiGenerateBtn.textContent = "Generate Ability";
+      }
+    });
+  }
+
+  // ---- Reroll last ability ----
+  if (aiRerollBtn) {
+    aiRerollBtn.addEventListener("click", () => {
+      if (!LastAbilityAIInput) {
+        showBanner("Generate at least one AI ability first.", {
+          type: "error"
+        });
+        return;
+      }
+      if (aiPrompt && LastAbilityAIInput.concept) {
+        aiPrompt.value = LastAbilityAIInput.concept;
+      }
+      if (aiPower && LastAbilityAIInput.power) {
+        aiPower.value = LastAbilityAIInput.power;
+      }
+      if (aiRole && LastAbilityAIInput.role) {
+        aiRole.value = LastAbilityAIInput.role;
+      }
+      if (aiAssign && LastAbilityAIInput.assignValue) {
+        aiAssign.value = LastAbilityAIInput.assignValue;
+      }
+      aiGenerateBtn?.click();
+    });
+  }
+
+  // ---- Filter ----
+  if (abilityFilter) {
+    abilityFilter.addEventListener("input", () => renderAbilityList());
+  }
+
+  // ---- Render list ----
+  function renderAbilityList() {
+    if (!abilityList) return;
+    const filter = (abilityFilter?.value || "").toLowerCase();
+
+    abilityList.innerHTML = "";
+
+    Abilities.filter((a) =>
+      !filter ? true : (a.name || "").toLowerCase().includes(filter)
+    ).forEach((ability) => {
+      const card = document.createElement("div");
+      card.className = "ability-card";
+
+      const header = document.createElement("div");
+      header.className = "ability-card-header";
+
+      const title = document.createElement("div");
+      title.className = "ability-card-title";
+      title.textContent = ability.name || "Unnamed Ability";
+
+      const tagRow = document.createElement("div");
+      tagRow.className = "ability-card-tags";
+
+      if (ability.power != null) {
+        const powerChip = document.createElement("span");
+        powerChip.className = "chip power";
+        powerChip.textContent = `Pwr ${ability.power}`;
+        tagRow.appendChild(powerChip);
+      }
+
+      if (ability.role) {
+        const roleChip = document.createElement("span");
+        roleChip.className = "chip role";
+        roleChip.textContent = ability.role;
+        tagRow.appendChild(roleChip);
+      }
+
+      if (ability.assignToType && ability.assignToId) {
+        const chip = document.createElement("span");
+        chip.className = "chip assignee";
+        chip.textContent =
+          ability.assignToType === "homie"
+            ? "Homie ability"
+            : ability.assignToType === "domain"
+            ? "Domain feature"
+            : "General";
+        tagRow.appendChild(chip);
+      }
+
+      header.append(title, tagRow);
+      card.appendChild(header);
+
+      const meta = parseAbilityText(ability.rawText || ability.text || "");
+
+      const summary = document.createElement("div");
+      summary.className = "ability-card-summary";
+      summary.textContent = meta.summary;
+      card.appendChild(summary);
+
+      const metaRow = document.createElement("div");
+      metaRow.className = "ability-card-meta";
+
+      const addMetaItem = (label, value) => {
+        const wrap = document.createElement("div");
+        const lab = document.createElement("div");
+        lab.className = "ability-meta-label";
+        lab.textContent = label;
+        const val = document.createElement("div");
+        val.className = "ability-meta-value";
+        val.textContent = value || "—";
+        wrap.append(lab, val);
+        metaRow.appendChild(wrap);
+      };
+
+      addMetaItem("Action", meta.action);
+      addMetaItem("Range", meta.range);
+      addMetaItem("Target", meta.target);
+      addMetaItem("Save / DC", meta.save);
+      addMetaItem("Damage", meta.damage);
+
+      card.appendChild(metaRow);
+
+      const effectDiv = document.createElement("div");
+      effectDiv.className = "ability-card-effect";
+      effectDiv.textContent = meta.effect;
+      card.appendChild(effectDiv);
+
+      if (meta.combo) {
+        const comboDiv = document.createElement("div");
+        comboDiv.className = "ability-card-combo";
+        comboDiv.textContent = "Combo: " + meta.combo;
+        card.appendChild(comboDiv);
+      }
+
+      const footer = document.createElement("div");
+      footer.className = "card-footer-row";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "btn secondary";
+      copyBtn.textContent = "Copy";
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard
+          .writeText(ability.rawText || ability.text || "")
+          .then(() => showBanner("Ability copied to clipboard ✓"))
+          .catch(() =>
+            showBanner("Copy failed (clipboard not available).", {
+              type: "error"
+            })
+          );
+      });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn danger";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.addEventListener("click", () => {
+        Abilities = Abilities.filter((x) => x.id !== ability.id);
+        saveAll();
+        renderAbilityList();
+      });
+
+      footer.append(copyBtn, deleteBtn);
+      card.appendChild(footer);
+
+      abilityList.appendChild(card);
+    });
+  }
+
+  renderAbilityList();
+}
+
+// Helper to interpret assign select
+function inferAssignType(value) {
+  if (!value) return null;
+  if (value.startsWith("homie:")) return "homie";
+  if (value.startsWith("domain:")) return "domain";
+  if (value === "general") return "general";
+  return null;
+}
+
+// =========================================
+// Panel 4 – Domains & Lair Actions
+// =========================================
+
+function initDomainsPanel() {
+  const nameEl = $("#domain-name");
+  const tierEl = $("#domain-tier");
+  const spuEl = $("#domain-spu");
+  const dcEl = $("#domain-dc");
+  const rangeEl = $("#domain-range");
+  const personalityEl = $("#domain-personality");
+  const notesEl = $("#domain-notes");
+  const homiesSelect = $("#domain-homies");
+
+  const saveDomainBtn = $("#btn-create-domain");
+  const domainFilter = $("#domain-filter");
+  const domainOverviewList = $("#domain-list");
+
+  // Lair AI
+  const lairDomainSelect = $("#lair-domain");
+  const lairPowerEl = $("#lair-power");
+  const lairCountEl = $("#lair-count");
+  const lairPromptEl = $("#lair-prompt");
+  const lairGenerateBtn = $("#btn-lair-generate");
+  const lairRerollBtn = $("#btn-lair-reroll");
+  const lairCardList = $("#lair-card-list");
+
+  if (!nameEl || !domainOverviewList) return;
+
+  function renderDomains() {
+    const filter = (domainFilter?.value || "").toLowerCase();
+    domainOverviewList.innerHTML = "";
+
+    Domains.filter((d) =>
+      !filter ? true : d.name.toLowerCase().includes(filter)
+    ).forEach((d) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const header = document.createElement("div");
+      header.className = "card-header-line";
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = d.name;
+
+      const tags = document.createElement("div");
+      tags.className = "ability-card-tags";
+
+      const tierChip = document.createElement("span");
+      tierChip.className = "chip";
+      tierChip.textContent = `Tier ${d.tier || "—"}`;
+
+      const fearChip = document.createElement("span");
+      fearChip.className = "chip";
+      fearChip.textContent = `Fear DC ${d.dc || "—"}`;
+
+      const rangeChip = document.createElement("span");
+      rangeChip.className = "chip";
+      rangeChip.textContent = d.range || "Range —";
+
+      tags.append(tierChip, fearChip, rangeChip);
+      header.append(title, tags);
+      card.appendChild(header);
+
+      const body = document.createElement("div");
+      body.style.fontSize = "0.78rem";
+
+      body.innerHTML =
+        (d.personality
+          ? `<div><span class="stat-label">Personality:</span> ${d.personality}</div>`
+          : "") +
+        (d.notes
+          ? `<div><span class="stat-label">Notes:</span> ${d.notes}</div>`
+          : "") +
+        (Array.isArray(d.homies) && d.homies.length
+          ? `<div><span class="stat-label">Territory Homies:</span> ${d.homies
+              .map((hid) => {
+                const h = Homies.find((x) => x.id === hid);
+                return h ? h.name : "Unknown";
+              })
+              .join(", ")}</div>`
+          : "");
+
+      card.appendChild(body);
+
+      const footer = document.createElement("div");
+      footer.className = "card-footer-row";
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn secondary";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () => {
+        Domains = Domains.filter((x) => x.id !== d.id);
+        saveAll();
+        renderDomains();
+        refreshDomainOptions();
+      });
+
+      footer.appendChild(delBtn);
+      card.appendChild(footer);
+
+      domainOverviewList.appendChild(card);
+    });
+
+    refreshDomainOptions();
+  }
+
+  if (saveDomainBtn) {
+    saveDomainBtn.addEventListener("click", () => {
+      const selectedHomies = [];
+      if (homiesSelect) {
+        Array.from(homiesSelect.selectedOptions).forEach((opt) => {
+          if (opt.value) selectedHomies.push(opt.value);
+        });
+      }
+
+      const domain = {
+        id: uuid(),
+        name: nameEl.value.trim() || "Unnamed Domain",
+        tier: parseInt(tierEl.value, 10) || 1,
+        spu: parseInt(spuEl.value, 10) || 0,
+        dc: parseInt(dcEl.value, 10) || 10,
+        range: rangeEl.value.trim(),
+        personality: personalityEl.value.trim(),
+        notes: notesEl.value.trim(),
+        homies: selectedHomies,
+        lairCards: [] // array of {id, name, power, domainId, rawText}
+      };
+      Domains.push(domain);
+      saveAll();
+      renderDomains();
+      refreshDomainOptions();
+      showBanner("Domain saved ✓");
+    });
+  }
+
+  if (domainFilter) {
+    domainFilter.addEventListener("input", () => renderDomains());
+  }
+
+  // ----- Lair cards -----
+
+  function renderLairCards() {
+    if (!lairCardList) return;
+    lairCardList.innerHTML = "";
+
+    Domains.forEach((domain) => {
+      if (!Array.isArray(domain.lairCards) || !domain.lairCards.length) return;
+
+      domain.lairCards.forEach((cardData) => {
+        const card = document.createElement("div");
+        card.className = "ability-card";
+
+        const header = document.createElement("div");
+        header.className = "ability-card-header";
+
+        const title = document.createElement("div");
+        title.className = "ability-card-title";
+        title.textContent =
+          cardData.name || `${domain.name} Lair Action`;
+
+        const tags = document.createElement("div");
+        tags.className = "ability-card-tags";
+
+        const powerChip = document.createElement("span");
+        powerChip.className = "chip power";
+        powerChip.textContent = `Pwr ${cardData.power || 10}`;
+
+        const domainChip = document.createElement("span");
+        domainChip.className = "chip assignee";
+        domainChip.textContent = `Domain: ${domain.name}`;
+
+        tags.append(powerChip, domainChip);
+        header.append(title, tags);
+        card.appendChild(header);
+
+        const meta = parseAbilityText(cardData.rawText || "");
+
+        const summary = document.createElement("div");
+        summary.className = "ability-card-summary";
+        summary.textContent =
+          meta.summary || cardData.shortSummary || "";
+        card.appendChild(summary);
+
+        const metaRow = document.createElement("div");
+        metaRow.className = "ability-card-meta";
+        const addMetaItem = (label, value) => {
+          const wrap = document.createElement("div");
+          const lab = document.createElement("div");
+          lab.className = "ability-meta-label";
+          lab.textContent = label;
+          const val = document.createElement("div");
+          val.className = "ability-meta-value";
+          val.textContent = value || "—";
+          wrap.append(lab, val);
+          metaRow.appendChild(wrap);
+        };
+        addMetaItem("Action", meta.action);
+        addMetaItem("Range", meta.range);
+        addMetaItem("Target", meta.target);
+        addMetaItem("Save / DC", meta.save);
+        addMetaItem("Damage", meta.damage);
+        card.appendChild(metaRow);
+
+        const effectDiv = document.createElement("div");
+        effectDiv.className = "ability-card-effect";
+        effectDiv.textContent = meta.effect;
+        card.appendChild(effectDiv);
+
+        if (meta.combo) {
+          const comboDiv = document.createElement("div");
+          comboDiv.className = "ability-card-combo";
+          comboDiv.textContent = "Combo: " + meta.combo;
+          card.appendChild(comboDiv);
+        }
+
+        const footer = document.createElement("div");
+        footer.className = "card-footer-row";
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "btn secondary";
+        copyBtn.textContent = "Copy";
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard
+            .writeText(cardData.rawText || "")
+            .then(() => showBanner("Lair action copied ✓"))
+            .catch(() =>
+              showBanner("Copy failed (clipboard not available).", {
+                type: "error"
+              })
+            );
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn danger";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", () => {
+          domain.lairCards = domain.lairCards.filter(
+            (x) => x.id !== cardData.id
+          );
+          saveAll();
+          renderLairCards();
+        });
+
+        footer.append(copyBtn, delBtn);
+        card.appendChild(footer);
+
+        lairCardList.appendChild(card);
+      });
+    });
+  }
+
+  if (lairGenerateBtn && lairDomainSelect && lairPowerEl && lairCountEl) {
+    lairGenerateBtn.addEventListener("click", async () => {
+      const domainId = lairDomainSelect.value;
+      const domain = Domains.find((d) => d.id === domainId);
+      const power = parseInt(lairPowerEl.value, 10) || 10;
+      const count = Math.max(1, parseInt(lairCountEl.value, 10) || 1);
+      const extra = lairPromptEl?.value.trim() || "";
+
+      if (!domain) {
+        showBanner("Pick a domain for the lair actions.", {
+          type: "error"
+        });
+        return;
+      }
+
+      LastLairAIInput = {
+        domainId,
+        power,
+        count,
+        extra
+      };
+
+      try {
+        lairGenerateBtn.disabled = true;
+        lairGenerateBtn.textContent = "Generating…";
+
+        const res = await fetch("/api/generate-soul-abilities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "domainLairs",
+            domain,
+            power,
+            count,
+            extra
+          })
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const text =
+          (typeof data === "string"
+            ? data
+            : data.text || data.result || "") || "";
+
+        // Split into actions by "Name:" markers if present
+        const parts = text
+          .split(/(?:^|\n)Name\s*[:=]/i)
+          .map((p) => p.trim())
+          .filter(Boolean);
+
+        if (!Array.isArray(domain.lairCards)) domain.lairCards = [];
+
+        if (parts.length > 0) {
+          parts.forEach((chunk) => {
+            const nameMatch = chunk.match(/^([^\n]+)\n/);
+            const name = nameMatch ? nameMatch[1].trim() : "Lair Action";
+            const rawText =
+              "Name: " +
+              chunk; /* ensures parseAbilityText has same info */
+
+            domain.lairCards.push({
+              id: uuid(),
+              name,
+              power,
+              domainId: domain.id,
+              rawText
+            });
+          });
+        } else {
+          // fallback: single big block
+          domain.lairCards.push({
+            id: uuid(),
+            name: `${domain.name} Lair Action`,
+            power,
+            domainId: domain.id,
+            rawText: text
+          });
+        }
+
+        saveAll();
+        renderLairCards();
+        showBanner("AI lair actions generated ✓");
+      } catch (err) {
+        console.error(err);
+        showBanner("AI lair generation failed.", { type: "error" });
+      } finally {
+        lairGenerateBtn.disabled = false;
+        lairGenerateBtn.textContent = "Generate Lair Actions";
+      }
+    });
+  }
+
+  if (lairRerollBtn) {
+    lairRerollBtn.addEventListener("click", () => {
+      if (!LastLairAIInput) {
+        showBanner("Generate lair actions at least once first.", {
+          type: "error"
+        });
+        return;
+      }
+      const { domainId, power, count, extra } = LastLairAIInput;
+      if (lairDomainSelect && domainId) lairDomainSelect.value = domainId;
+      if (lairPowerEl && power) lairPowerEl.value = power;
+      if (lairCountEl && count) lairCountEl.value = count;
+      if (lairPromptEl && extra) lairPromptEl.value = extra;
+      lairGenerateBtn?.click();
+    });
+  }
+
+  renderDomains();
+  renderLairCards();
+}
+
+// =========================================
+// Panel 5 – Playable View (accordion style)
+// =========================================
+
+function initPlayablePanel() {
+  const homieList = $("#play-homies");
+  const domainList = $("#play-domains");
+  const allAbilitiesList = $("#play-abilities");
+
+  if (!homieList || !domainList || !allAbilitiesList) return;
+
+  // Homies with dropdown of abilities assigned to them
+  homieList.innerHTML = "";
+  Homies.forEach((h) => {
+    const acc = document.createElement("div");
+    acc.className = "accordion";
+
+    const header = document.createElement("div");
+    header.className = "accordion-header";
+
+    const title = document.createElement("div");
+    title.className = "accordion-title";
+    title.textContent = h.name;
+
+    const meta = document.createElement("div");
+    meta.className = "accordion-meta";
+    meta.textContent = `HP ${h.hp || "—"}  AC ${h.ac || "—"}  Move ${
+      h.move || "—"
+    }`;
+
+    const chevron = document.createElement("div");
+    chevron.className = "accordion-chevron";
+    chevron.textContent = "▾";
+
+    header.append(title, meta, chevron);
+    acc.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "accordion-body";
+
+    const coreLine = document.createElement("div");
+    coreLine.style.fontSize = "0.78rem";
+    coreLine.innerHTML =
+      (h.role ? `<div><b>Role:</b> ${h.role}</div>` : "") +
+      (h.attack ? `<div><b>Attack:</b> ${h.attack}</div>` : "");
+    body.appendChild(coreLine);
+
+    const abilHeader = document.createElement("div");
+    abilHeader.style.marginTop = "0.4rem";
+    abilHeader.style.fontSize = "0.8rem";
+    abilHeader.style.fontWeight = "600";
+    abilHeader.textContent = "Abilities";
+    body.appendChild(abilHeader);
+
+    const abilCards = document.createElement("div");
+    abilCards.className = "card-list ability-card-list";
+
+    Abilities.filter(
+      (a) =>
+        a.assignToType === "homie" &&
+        a.assignToId &&
+        a.assignToId.includes(h.id)
+    ).forEach((a) => {
+      const metaObj = parseAbilityText(a.rawText || a.text || "");
+      const smallCard = document.createElement("div");
+      smallCard.className = "ability-card";
+
+      const header2 = document.createElement("div");
+      header2.className = "ability-card-header";
+
+      const title2 = document.createElement("div");
+      title2.className = "ability-card-title";
+      title2.textContent = a.name || "Ability";
+
+      const tags2 = document.createElement("div");
+      tags2.className = "ability-card-tags";
+
+      if (a.power != null) {
+        const chip = document.createElement("span");
+        chip.className = "chip power";
+        chip.textContent = `Pwr ${a.power}`;
+        tags2.appendChild(chip);
+      }
+
+      header2.append(title2, tags2);
+      smallCard.appendChild(header2);
+
+      const summary = document.createElement("div");
+      summary.className = "ability-card-summary";
+      summary.textContent = metaObj.summary;
+      smallCard.appendChild(summary);
+
+      abilCards.appendChild(smallCard);
+    });
+
+    if (!abilCards.children.length) {
+      const noAbil = document.createElement("div");
+      noAbil.style.fontSize = "0.74rem";
+      noAbil.style.color = "#9ba0e6";
+      noAbil.textContent = "No abilities assigned yet.";
+      abilCards.appendChild(noAbil);
+    }
+
+    body.appendChild(abilCards);
+    acc.appendChild(body);
+
+    header.addEventListener("click", () => {
+      const isHidden = body.style.display === "none";
+      body.style.display = isHidden ? "block" : "none";
+      chevron.textContent = isHidden ? "▾" : "▸";
+    });
+
+    // start collapsed
+    body.style.display = "none";
+    chevron.textContent = "▸";
+
+    homieList.appendChild(acc);
+  });
+
+  // Domains with lair actions
+  domainList.innerHTML = "";
+  Domains.forEach((d) => {
+    const acc = document.createElement("div");
+    acc.className = "accordion";
+
+    const header = document.createElement("div");
+    header.className = "accordion-header";
+
+    const title = document.createElement("div");
+    title.className = "accordion-title";
+    title.textContent = d.name;
+
+    const meta = document.createElement("div");
+    meta.className = "accordion-meta";
+    meta.textContent = `Tier ${d.tier || "—"}  Fear DC ${
+      d.dc || "—"
+    }  Range ${d.range || "—"}`;
+
+    const chevron = document.createElement("div");
+    chevron.className = "accordion-chevron";
+    chevron.textContent = "▾";
+
+    header.append(title, meta, chevron);
+    acc.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "accordion-body";
+
+    if (d.personality) {
+      const p = document.createElement("div");
+      p.style.fontSize = "0.78rem";
+      p.style.marginBottom = "0.25rem";
+      p.innerHTML = `<b>Personality:</b> ${d.personality}`;
+      body.appendChild(p);
+    }
+
+    const lairHeader = document.createElement("div");
+    lairHeader.style.fontSize = "0.8rem";
+    lairHeader.style.fontWeight = "600";
+    lairHeader.textContent = "Lair Actions";
+    body.appendChild(lairHeader);
+
+    const lairList = document.createElement("div");
+    lairList.className = "card-list ability-card-list";
+
+    (d.lairCards || []).forEach((lc) => {
+      const metaObj = parseAbilityText(lc.rawText || "");
+      const mini = document.createElement("div");
+      mini.className = "ability-card";
+
+      const h2 = document.createElement("div");
+      h2.className = "ability-card-header";
+
+      const t2 = document.createElement("div");
+      t2.className = "ability-card-title";
+      t2.textContent = lc.name || "Lair Action";
+
+      const tags = document.createElement("div");
+      tags.className = "ability-card-tags";
+
+      if (lc.power != null) {
+        const chip = document.createElement("span");
+        chip.className = "chip power";
+        chip.textContent = `Pwr ${lc.power}`;
+        tags.appendChild(chip);
+      }
+
+      h2.append(t2, tags);
+      mini.appendChild(h2);
+
+      const summary = document.createElement("div");
+      summary.className = "ability-card-summary";
+      summary.textContent = metaObj.summary;
+      mini.appendChild(summary);
+
+      lairList.appendChild(mini);
+    });
+
+    if (!lairList.children.length) {
+      const noLair = document.createElement("div");
+      noLair.style.fontSize = "0.74rem";
+      noLair.style.color = "#9ba0e6";
+      noLair.textContent = "No lair actions yet.";
+      lairList.appendChild(noLair);
+    }
+
+    body.appendChild(lairList);
+    acc.appendChild(body);
+
+    header.addEventListener("click", () => {
+      const isHidden = body.style.display === "none";
+      body.style.display = isHidden ? "block" : "none";
+      chevron.textContent = isHidden ? "▾" : "▸";
+    });
+
+    body.style.display = "none";
+    chevron.textContent = "▸";
+
+    domainList.appendChild(acc);
+  });
+
+  // All abilities flat list
+  allAbilitiesList.innerHTML = "";
+  Abilities.forEach((a) => {
+    const meta = parseAbilityText(a.rawText || a.text || "");
+    const card = document.createElement("div");
+    card.className = "ability-card";
+
+    const header = document.createElement("div");
+    header.className = "ability-card-header";
+
+    const title = document.createElement("div");
+    title.className = "ability-card-title";
+    title.textContent = a.name || "Ability";
+
+    const tags = document.createElement("div");
+    tags.className = "ability-card-tags";
+    if (a.power != null) {
+      const chip = document.createElement("span");
+      chip.className = "chip power";
+      chip.textContent = `Pwr ${a.power}`;
+      tags.appendChild(chip);
+    }
+    header.append(title, tags);
+    card.appendChild(header);
+
+    const summary = document.createElement("div");
+    summary.className = "ability-card-summary";
+    summary.textContent = meta.summary;
+    card.appendChild(summary);
+
+    allAbilitiesList.appendChild(card);
+  });
+}
+
+// =========================================
+// Init
+// =========================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAll();
+  initTabs();
+  initTextareaAutoExpand();
+
+  initSoulsPanel();
+  initHomiesPanel();
+  initAbilitiesPanel();
+  initDomainsPanel();
+  initPlayablePanel();
+
+  // Keep dropdowns synced on load
+  refreshLinkedSoulOptions();
+  refreshHomieOptions();
+  refreshDomainOptions();
+});
