@@ -1,328 +1,308 @@
-// api/generate-soul-abilities.js
-//
-// Vercel serverless function.
-//
-// Expects POST with JSON body:
-//   { mode: "homieAttack" | "domainLair" | "genericAbility", ... }
-//
-// Responds with:
-//   { success: true, text: string, structured?: object }
-// or
-//   { success: false, error: string }
+import OpenAI from "openai";
 
-module.exports = async function (req, res) {
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res
+    return res
       .status(405)
       .json({ success: false, error: "Method not allowed" });
-    return;
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({
-      success: false,
-      error: "OPENAI_API_KEY is not set in the environment.",
-    });
-    return;
+  if (!process.env.OPENAI_API_KEY) {
+    return res
+      .status(500)
+      .json({ success: false, error: "OPENAI_API_KEY is not set" });
   }
 
   let body;
   try {
-    body =
-      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    if (!body || typeof body !== "object") {
-      throw new Error("Empty or invalid body.");
-    }
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      error: "Invalid JSON body: " + err.message,
-    });
-    return;
+    console.error("Bad JSON body", err);
+    return res
+      .status(400)
+      .json({ success: false, error: "Invalid JSON body" });
   }
 
-  const { mode } = body;
+  const { mode } = body || {};
   if (!mode) {
-    res.status(400).json({
-      success: false,
-      error: "Missing 'mode' in request body.",
-    });
-    return;
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing 'mode' in body" });
   }
 
   try {
-    const { systemPrompt, userPrompt } = buildPrompts(body);
-
-    const openaiRes = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.9,
-        }),
-      }
-    );
-
-    const text = await openaiRes.text();
-    if (!openaiRes.ok) {
-      console.error("OpenAI API error:", text);
-      res.status(openaiRes.status).json({
-        success: false,
-        error: `OpenAI API error: ${text}`,
-      });
-      return;
+    if (mode === "genericAbility") {
+      const text = await handleGenericAbility(body);
+      return res.status(200).json({ success: true, text });
     }
 
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (err) {
-      console.error("Failed to parse OpenAI response JSON:", err, text);
-      res.status(500).json({
-        success: false,
-        error: "Failed to parse OpenAI response JSON.",
-      });
-      return;
+    if (mode === "homieAttack") {
+      const text = await handleHomieAttack(body);
+      return res.status(200).json({ success: true, text });
     }
 
-    const content = json.choices?.[0]?.message?.content || "";
-    const { structured, rawText } = parseStructuredJSON(content);
+    if (mode === "domainLair") {
+      const actions = await handleDomainLair(body);
+      return res.status(200).json({ success: true, actions });
+    }
 
-    res.status(200).json({
-      success: true,
-      text: rawText,
-      structured,
-    });
+    return res
+      .status(400)
+      .json({ success: false, error: `Unknown mode: ${mode}` });
   } catch (err) {
-    console.error("generate-soul-abilities handler error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message || "Unknown server error",
-    });
+    console.error("AI handler error", err);
+    return res
+      .status(500)
+      .json({ success: false, error: "AI generation failed" });
   }
-};
-
-// ---------- Prompt builder ----------
-
-function buildPrompts(body) {
-  const { mode } = body;
-  const souls = body.souls || [];
-  const homies = body.homies || [];
-  const domains = body.domains || [];
-
-  const soulSummary = souls
-    .map(
-      (s) =>
-        `${s.name} — SoL ${s.soulLevel}, SPU ${s.spu}, traits: ${
-          s.traits || "none"
-        }`
-    )
-    .join("\n");
-
-  const homieSummary = homies
-    .map(
-      (h) =>
-        `${h.name} [${h.type}] — role ${h.role || "?"}, HP ${
-          h.hp || "?"
-        }, AC ${h.ac || "?"}, move ${
-          h.move || "?"
-        }, SPU ${h.totalSPUInvested || 0}, traits: ${
-          h.traits || "none"
-        }`
-    )
-    .join("\n");
-
-  const domainSummary = domains
-    .map(
-      (d) =>
-        `${d.name} — Tier ${d.tier}, SPU ${
-          d.spuInvested
-        }, Fear DC ${d.fearDC}, size ${
-          d.size || "?"
-        }, personality: ${d.personality || "none"}`
-    )
-    .join("\n");
-
-  const baseSystemPrompt = `
-You are a rules-savvy D&D 5e / One Piece hybrid designer.
-You design powerful but usable homebrew abilities, Homie attacks, and domain lair actions
-for a character who wields Big Mom's Soul-Soul Fruit.
-
-VERY IMPORTANT:
-- Always respond with a SINGLE JSON object, no markdown, no code fences.
-- The outer JSON must match the format requested in the user prompt for the given mode.
-- Do not include trailing commas.
-- Values should be short but evocative, suitable for use on a reference card.
-`;
-
-  if (mode === "homieAttack") {
-    const { homie, concept, effectTypes, powerLevel } = body;
-
-    const userPrompt = `
-MODE: homieAttack
-
-The user wants a signature multi-step attack for a specific Homie.
-
-Homie:
-${JSON.stringify(homie, null, 2)}
-
-Overall Homie roster:
-${homieSummary || "None"}
-
-Domains:
-${domainSummary || "None"}
-
-Concept from user:
-${concept || "None given."}
-
-Effect types requested:
-${(effectTypes || []).join(", ") || "None specified"}
-
-Desired power level (1-10):
-${powerLevel}
-
-Return a JSON object with:
-{
-  "abilityName": string,
-  "actionType": string,
-  "range": string,
-  "target": string,
-  "saveDC": string,
-  "damageDice": string,
-  "mechanicalEffect": string,
-  "comboNotes": string
 }
-`;
 
-    return { systemPrompt: baseSystemPrompt, userPrompt };
-  }
-
-  if (mode === "domainLair") {
-    const { domain } = body;
-
-    const userPrompt = `
-MODE: domainLair
-
-The user wants 3-5 lair actions for this Domain in the style of D&D 5e lair actions
-mixed with One Piece soul logic.
-
-Domain:
-${JSON.stringify(domain, null, 2)}
-
-All Domains:
-${domainSummary || "None"}
-
-Homies:
-${homieSummary || "None"}
-
-Return a JSON object with:
-{
-  "lairActions": string  // A short block of text describing 3-5 numbered lair actions.
+async function chat(prompt) {
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.85,
+    max_tokens: 700,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a rules-savvy D&D 5e designer working in a One Piece / Big Mom Soul-Soul Fruit setting. Be flavorful but mechanically clear.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+  return completion.choices?.[0]?.message?.content?.trim() || "";
 }
-`;
 
-    return { systemPrompt: baseSystemPrompt, userPrompt };
-  }
-
-  // genericAbility
+async function handleGenericAbility(body) {
   const {
-    assignTo,
-    powerLevel,
+    name,
+    ownerKey,
+    action,
+    range,
+    target,
+    dc,
+    damage,
+    power,
     soulCost,
-    effectTypes,
-    outcomeTypes,
+    types,
+    outcomes,
     effectNotes,
     outcomeNotes,
-    extraNotes,
+    mechNotes,
+    comboNotes,
+    souls,
+    homies,
+    domains,
   } = body;
 
-  const userPrompt = `
-MODE: genericAbility
-
-The user wants a powerful, cinematic ability that fits their Soul-Soul Fruit toolkit.
-
-Assign this ability to:
-${assignTo || "General / Party"}
-
-Soul bank:
-${soulSummary || "None"}
-
-Homies:
-${homieSummary || "None"}
-
-Domains:
-${domainSummary || "None"}
-
-Requested effect types:
-${(effectTypes || []).join(", ") || "None specified"}
-
-Requested outcome / shape:
-${(outcomeTypes || []).join(", ") || "None specified"}
-
-Effect notes:
-${effectNotes || "None"}
-
-Outcome notes:
-${outcomeNotes || "None"}
-
-Extra notes / combo intent:
-${extraNotes || "None"}
-
-Power level (1-10):
-${powerLevel}
-
-Optional soul cost (SPU):
-${soulCost}
-
-Return a JSON object with:
-{
-  "abilityName": string,
-  "actionType": string,
-  "range": string,
-  "target": string,
-  "saveDC": string,
-  "damageDice": string,
-  "mechanicalEffect": string,
-  "comboNotes": string
-}
-`;
-
-  return { systemPrompt: baseSystemPrompt, userPrompt };
-}
-
-// ---------- Parse structured JSON from model ----------
-
-function parseStructuredJSON(content) {
-  const rawText = typeof content === "string" ? content : "";
-  let structured = null;
-
-  try {
-    const firstBrace = rawText.indexOf("{");
-    const lastBrace = rawText.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      const jsonSlice = rawText.slice(firstBrace, lastBrace + 1);
-      structured = JSON.parse(jsonSlice);
-    } else {
-      structured = JSON.parse(rawText);
-    }
-  } catch (err) {
-    console.error(
-      "Failed to parse structured JSON from model:",
-      err,
-      rawText
-    );
-    structured = null;
+  let ownerLabel = "General / party-wide technique";
+  if (ownerKey?.startsWith("homie:")) {
+    const id = ownerKey.slice(6);
+    const h = (homies || []).find((x) => x.id === id);
+    if (h) ownerLabel = `Homie ability for ${h.name}, a ${h.role || h.type}.`;
+  } else if (ownerKey?.startsWith("domain:")) {
+    const id = ownerKey.slice(7);
+    const d = (domains || []).find((x) => x.id === id);
+    if (d) ownerLabel = `Domain technique used within ${d.name}.`;
   }
 
-  return { structured, rawText };
+  const soulSummary =
+    (souls || [])
+      .slice(0, 4)
+      .map(
+        (s) =>
+          `${s.name} (Rating ${s.rating}, SoL ${s.level}, ${s.spu} SPU, traits: ${s.tags})`
+      )
+      .join("\n") || "Various harvested souls from powerful foes.";
+
+  const homieSummary =
+    (homies || [])
+      .slice(0, 4)
+      .map(
+        (h) =>
+          `${h.name} – ${h.type}, role ${h.role}, HP ${h.hp}, AC ${h.ac}, attack ${h.attack}`
+      )
+      .join("\n") || "No specific Homies referenced.";
+
+  const domainSummary =
+    (domains || [])
+      .slice(0, 3)
+      .map(
+        (d) =>
+          `${d.name} – Tier ${d.tier}, Fear DC ${d.dc}, range ${d.range}, personality: ${d.personality}`
+      )
+      .join("\n") || "No specific Domains referenced.";
+
+  const prompt = `
+Forge a new Soul-Soul Fruit style ability for D&D 5e.
+
+Name (suggested): ${name || "You can rename this ability appropriately."}
+Owner: ${ownerLabel}
+Desired effect / concept:
+${effectNotes || outcomeNotes || mechNotes || "Make something thematic and cool."}
+
+Mechanical scaffolding:
+- Action type: ${action || "Choose what fits best."}
+- Range: ${range || "Choose what fits best."}
+- Target: ${target || "Choose what fits best."}
+- Save / DC text: ${dc || "Choose a reasonable DC or '—'."}
+- Damage dice: ${damage || "Choose damage dice appropriate to the power level."}
+- Approximate power level (1–10, 10 is godlike with huge drawback): ${power || 6}
+- Soul Energy cost (SPU): ${soulCost || 0}
+
+Effect tags: ${Array.isArray(types) && types.length ? types.join(", ") : "Any"}
+Outcome / Shape tags: ${
+    Array.isArray(outcomes) && outcomes.length ? outcomes.join(", ") : "Any"
+  }
+
+Helpful world context:
+Harvested Souls:
+${soulSummary}
+
+Homies:
+${homieSummary}
+
+Domains:
+${domainSummary}
+
+Combo / interaction notes:
+${comboNotes || "You may suggest how this combines with Homies, Domains, or souls."}
+
+Write the result as a short description focused on what the ability does mechanically and thematically.
+Do NOT explain the reasoning. Just give the final ability text that a DM could paste into a sheet.
+`;
+
+  return chat(prompt);
+}
+
+async function handleHomieAttack(body) {
+  const { targetHomieId, concept, power, types, homies, souls, domains } =
+    body;
+
+  const homie =
+    (homies || []).find((h) => h.id === targetHomieId) ||
+    homies?.[0] ||
+    null;
+
+  const homieLine = homie
+    ? `${homie.name}, a ${homie.type} Homie, role ${homie.role}, HP ${homie.hp}, AC ${homie.ac}, attack ${homie.attack}.`
+    : "A generic powerful Homie.";
+
+  const soulSummary =
+    (souls || [])
+      .slice(0, 3)
+      .map(
+        (s) =>
+          `${s.name} (Rating ${s.rating}, SoL ${s.level}, traits: ${s.tags})`
+      )
+      .join("\n") || "Various harvested souls.";
+
+  const domainSummary =
+    (domains || [])
+      .slice(0, 2)
+      .map(
+        (d) =>
+          `${d.name} – Tier ${d.tier}, Fear DC ${d.dc}, range ${d.range}, personality: ${d.personality}`
+      )
+      .join("\n") || "No specific domains.";
+
+  const prompt = `
+Design a signature attack ability for this Homie in a One Piece / D&D 5e hybrid game.
+
+Target Homie:
+${homieLine}
+
+Concept text from player:
+${concept || "(No extra concept given.)"}
+
+Desired power level (1–10): ${power || 7}
+Effect tags: ${Array.isArray(types) && types.length ? types.join(", ") : "Any"}
+
+Helpful world context:
+Souls:
+${soulSummary}
+
+Domains:
+${domainSummary}
+
+Write the result as a clear D&D-style ability block (short name, action type, range, target, save/DC, damage dice and rider effects).
+`;
+
+  return chat(prompt);
+}
+
+async function handleDomainLair(body) {
+  const { domain, homies = [], reroll } = body;
+
+  const domainLine = domain
+    ? `${domain.name} – Tier ${domain.tier}, Fear DC ${domain.dc}, range ${domain.range}, personality: ${domain.personality}`
+    : "Unnamed domain.";
+
+  const homieSummary =
+    homies
+      .map(
+        (h) =>
+          `${h.name} – ${h.type}, role ${h.role}, HP ${h.hp}, AC ${h.ac}, attack ${h.attack}`
+      )
+      .join("\n") || "No specific territory Homies.";
+
+  const prompt = `
+Create 3 distinct lair actions for this Soul-Soul Fruit style Domain in a D&D 5e game.
+
+Domain:
+${domainLine}
+
+Territory Homies bound to this domain:
+${homieSummary}
+
+Each lair action should:
+- Be usable as a standard lair action (initiative count 20, losing ties).
+- Have a name.
+- Have an optional saving throw/DC (or "—").
+- Describe the effect in 2–4 sentences, including damage, conditions, difficult terrain, movement, etc.
+- Optionally mention how specific Homies interact with it.
+
+Because this is a ${
+    reroll ? "reroll / alternate" : "first"
+  } set, you can push the creativity a bit.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "actions": [
+    { "name": "...", "dc": "Save text or —", "effect": "Full rules text.", "notes": "Optional extra notes, or empty string." },
+    { "name": "...", "dc": "...", "effect": "...", "notes": "..." },
+    { "name": "...", "dc": "...", "effect": "...", "notes": "..." }
+  ]
+}
+No markdown, no extra commentary.
+`;
+
+  const raw = await chat(prompt);
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed.actions || !Array.isArray(parsed.actions)) {
+      throw new Error("Missing actions array");
+    }
+    return parsed.actions;
+  } catch (err) {
+    console.error("Failed to parse domain lair JSON from model:", err, raw);
+    // Fallback: treat whole text as one action
+    return [
+      {
+        name: "Lair Action",
+        dc: "",
+        effect: raw,
+        notes: "Model did not return structured JSON; kept raw text.",
+      },
+    ];
+  }
 }
