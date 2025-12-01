@@ -57,6 +57,12 @@ body {
   line-height: 1.4;
 }
 
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ------------------------------
    ERROR BANNER
 ------------------------------ */
@@ -152,8 +158,11 @@ body {
   border-radius: 999px;
   cursor: pointer;
   position: relative;
-  transition: background var(--transition-fast), color var(--transition-fast),
-    box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .tab-button::before {
@@ -188,6 +197,7 @@ body {
 
 .app-main {
   padding: 1.8rem 0 3rem;
+  flex: 1;
 }
 
 .app-main-inner {
@@ -213,11 +223,17 @@ body {
 }
 
 .panel-title {
-  margin: 0 0 1.2rem;
+  margin: 0 0 0.8rem;
   font-size: 1.1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #ffffff;
+}
+
+.panel-description {
+  margin: 0 0 1.2rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
 }
 
 /* Subpanels */
@@ -229,6 +245,10 @@ body {
   box-shadow: var(--shadow-soft);
   padding: 1.1rem 1.25rem 1.25rem;
   margin-bottom: 1.2rem;
+}
+
+.subpanel:last-child {
+  margin-bottom: 0;
 }
 
 .subpanel-title {
@@ -246,17 +266,11 @@ body {
   margin-bottom: 0.6rem;
 }
 
-/* Center the panel content inside the big rounded shell */
-
-.panel .subpanel:last-child {
-  margin-bottom: 0;
-}
-
-/* Panel grid (Abilities / Domains 2-column layout) */
+/* Panel grid (two-column layout) */
 
 .panel-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.05fr);
   gap: 1.2rem;
 }
 
@@ -300,7 +314,9 @@ textarea {
   color: var(--text-main);
   font-size: 0.8rem;
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
     background var(--transition-fast);
 }
 
@@ -325,7 +341,7 @@ textarea:focus {
 /* Filter input */
 
 .filter-input {
-  width: 180px;
+  width: 200px;
 }
 
 /* Derived stats */
@@ -362,8 +378,11 @@ textarea:focus {
   font-size: 0.8rem;
   border: none;
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
-    background var(--transition-fast), filter var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    filter var(--transition-fast);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -570,7 +589,11 @@ textarea:focus {
   align-items: center;
   gap: 0.6rem;
   cursor: pointer;
-  background: linear-gradient(90deg, rgba(45, 63, 155, 0.95), rgba(35, 37, 98, 0.95));
+  background: linear-gradient(
+    90deg,
+    rgba(45, 63, 155, 0.95),
+    rgba(35, 37, 98, 0.95)
+  );
 }
 
 .accordion-title {
@@ -599,6 +622,10 @@ textarea:focus {
 @media (max-width: 1024px) {
   .panel-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filter-input {
+    width: 100%;
   }
 }
 
